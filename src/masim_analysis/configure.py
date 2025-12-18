@@ -878,7 +878,7 @@ def create_seasonal_model_rainfall(enable: bool, country_code: str, period: int 
             "period": period,
         },
     }
-    
+
 
 def create_seasonal_model_pattern(enable: bool, country_code: str, period: int = 365) -> dict:
     """Create a seasonality configuration block for MaSim.
@@ -1014,18 +1014,18 @@ def create_raster_db(
     except FileExistsError:
         pass
 
-    administrative_boundaries =  {
-            "name": "district",
-            "raster": os.path.join(data_root, f"{name}{calibration_string}_districts.asc"),
-     }    
+    administrative_boundaries = {
+        "name": "district",
+        "raster": os.path.join(data_root, f"{name}{calibration_string}_districts.asc"),
+    }
 
     raster_db = {
         "population_raster": os.path.join(data_root, f"{name}{calibration_string}_initialpopulation.asc"),
         # "district_raster": os.path.join(data_root, f"{name}{calibration_string}_districts.asc"),asdasd
-        "administrative_boundaries" : [administrative_boundaries],
+        "administrative_boundaries": [administrative_boundaries],
         "cell_size": 5,
-        "pf_treatment_under5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
-        "pf_treatment_over5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
+        "pr_treatment_under5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
+        "pr_treatment_over5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
         "age_distribution_by_location": [age_distribution],
         "p_treatment_for_less_than_5_by_location": [access_rate],
         "p_treatment_for_more_than_5_by_location": [access_rate],

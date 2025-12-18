@@ -157,7 +157,7 @@ def write_pixel_data_files(raster_db: dict, population: int):
     ----------
     raster_db
         Mapping that must include the output paths for the population and
-        administrative boundaries raster files (keys used in callers).
+        district raster files (keys used in callers).
     population
         Population value (one of ``POPULATION_BINS``) used to populate the
         generated ASCII pixel file contents.
@@ -166,8 +166,17 @@ def write_pixel_data_files(raster_db: dict, population: int):
         file.write(
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{population}"
         )
-    with open(raster_db["administrative_boundaries"][0]["raster"], "w") as file:
+    with open(raster_db["district_raster"], "w") as file:
         file.write(f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n1")
+
+    with open(raster_db["pr_treatment_under5"], "w") as file:
+        file.write(
+            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
+        )
+    with open(raster_db["pr_treatment_over5"], "w") as file:
+        file.write(
+            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
+        )
 
 
 def generate_calibration_commands(
