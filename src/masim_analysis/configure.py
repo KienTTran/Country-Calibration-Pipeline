@@ -1021,8 +1021,8 @@ def create_raster_db(
 
     raster_db = {
         "population_raster": os.path.join(data_root, f"{name}{calibration_string}_initialpopulation.asc"),
-        # "district_raster": os.path.join(data_root, f"{name}{calibration_string}_districts.asc"),asdasd
-        "administrative_boundaries": [administrative_boundaries],
+        "district_raster": os.path.join(data_root, f"{name}{calibration_string}_districts.asc"),
+        # "administrative_boundaries": [administrative_boundaries],
         "cell_size": 5,
         "pr_treatment_under5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
         "pr_treatment_over5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
@@ -1113,7 +1113,7 @@ def configure(
         country_code, calibration, calibration_str, access_rate_override, age_distribution, beta_override
     )
     execution_control["spatial_model"] = create_spatial_model(calibration)
-    execution_control["seasonal_info"] = create_seasonal_model_pattern(True, country_code)
+    execution_control["seasonal_info"] = create_seasonal_model_rainfall(True, country_code)
     execution_control["parasite_density_level"] = asdict(parasite_density_level)
     execution_control["immune_system_information"] = asdict(immune_system_information)
     execution_control["circulation_info"] = asdict(circulation_info)

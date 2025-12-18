@@ -1,0 +1,30 @@
+2025-12-18 12:45:05 [INFO] Starting validation for country: ago
+2025-12-18 12:45:05 [INFO] Validation configuration file created.
+2025-12-18 12:45:05 [INFO] Generated 1 validation commands to execute.
+2025-12-18 12:45:05 [INFO] Starting validation runs...
+2025-12-18 12:45:05 [ERROR] Failed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/ago/validation/validation_config_ -r SQLitePixelReporter -j 0
+2025-12-18 12:45:05 [ERROR] Error: 
+2025-12-18 12:45:05 [INFO] Validation runs completed: 0 successful, [('./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/ago/validation/validation_config_ -r SQLitePixelReporter -j 0', '')] failed.
+2025-12-18 12:45:36 [INFO] Starting validation for country: ago
+2025-12-18 12:45:36 [INFO] Validation configuration file created.
+2025-12-18 12:45:36 [INFO] Generated 1 validation commands to execute.
+2025-12-18 12:45:36 [INFO] Starting validation runs...
+2025-12-18 12:46:44 [INFO] Starting validation for country: ago
+2025-12-18 12:46:44 [INFO] Validation configuration file created.
+2025-12-18 12:46:44 [INFO] Generated 1 validation commands to execute.
+2025-12-18 12:46:44 [INFO] Starting validation runs...
+2025-12-18 12:48:51 [INFO] Starting validation for country: ago
+2025-12-18 12:48:51 [INFO] Validation configuration file created.
+2025-12-18 12:48:51 [INFO] Generated 1 validation commands to execute.
+2025-12-18 12:48:51 [INFO] Starting validation runs...
+2025-12-18 13:09:21 [INFO] Starting validation for country: ago
+2025-12-18 13:09:22 [INFO] Validation configuration file created.
+2025-12-18 13:09:22 [INFO] Generated 1 validation commands to execute.
+2025-12-18 13:09:22 [INFO] Starting validation runs...
+2025-12-18 13:29:29 [INFO] Successfully executed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLitePixelReporter -j 0
+2025-12-18 13:29:29 [INFO] Validation runs completed: 1 successful, [] failed.
+2025-12-18 13:29:42 [INFO]  132,907 clinical episodes | SCALED:  26,581,400
+2025-12-18 13:29:42 [INFO]  141,789 population | SCALED:  28,357,731
+2025-12-18 13:29:42 [INFO] Prevalence comparison data saved.
+2025-12-18 13:29:44 [INFO] Prevalence fit plot saved.
+2025-12-18 13:29:44 [INFO] Validation post-processing completed.

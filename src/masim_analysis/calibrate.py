@@ -55,6 +55,9 @@ yaml = YAML()
 BETAS = [0.001, 0.005, 0.01, 0.0125, 0.015, 0.02, 0.03, 0.04, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.8, 1]
 POPULATION_BINS = [10, 20, 30, 40, 50, 75, 100, 250, 500, 1000, 2000, 5000, 10000, 15000, 20000]
 
+# BETAS = [0.005, 0.01,0.04, 0.05,0.25, 0.3]
+# POPULATION_BINS = [10, 20, 50, 100, 200, 500]
+
 
 # ==== Configuration generation ====
 def generate_configuration_files(
@@ -136,7 +139,7 @@ def generate_configuration_files(
                     True,
                 )
 
-                write_pixel_data_files(execution_control["raster_db"], pop)
+                write_pixel_data_files(execution_control["raster_db"], pop, access)
                 output_path = os.path.join("conf", country_code, "calibration", f"cal_{pop}_{access}_{beta}.yml")
                 try:
                     yaml.dump(execution_control, open(output_path, "w"))
@@ -145,7 +148,7 @@ def generate_configuration_files(
                         logger.error(f"Error writing YAML file {output_path}: {e}")
 
 
-def write_pixel_data_files(raster_db: dict, population: int):
+def write_pixel_data_files(raster_db: dict, population: int, access: float):
     """Write per-pixel ASCII files required by MaSim for a single population.
 
     The function expects ``raster_db`` to contain keys such as
@@ -171,11 +174,11 @@ def write_pixel_data_files(raster_db: dict, population: int):
 
     with open(raster_db["pr_treatment_under5"], "w") as file:
         file.write(
-            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
+            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{access}"
         )
     with open(raster_db["pr_treatment_over5"], "w") as file:
         file.write(
-            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
+            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{access}"
         )
 
 
@@ -652,7 +655,7 @@ def get_beta(
         c = coefs[2]
     except KeyError as e:
         logging.error(f"KeyError: {e} for access rate {access_rate} and population {population}")
-        return np.nan
+        return np.nan # <--- temporary change to return 0.0 instead of nan for debugging
     except ValueError as e:
         logging.error(f"ValueError: {e} for access rate {access_rate} and population {population}")
         logging.error(f"Received the following coefficients: {models_map[access_rate][population]}")
@@ -962,6 +965,7 @@ def summarize_calibration_results(country: CountryParams, data_path: Path | str 
         columns=["population", "access_rate", "beta", "iteration", "pfprunder5", "pfpr2to10", "pfprall"]
     )
     for file in files:
+        print(f"Processing file: {file}")
         data = analysis.get_table(file, "monthlysitedata")
         end_month = data["monthlydataid"].unique()[-13]
         file_name = file.stem
@@ -1014,14 +1018,14 @@ def calibrate(country_code: str, repetitions: int, output_dir: Path | str = Path
     run_calibration_simulations(country, access_rates, repetitions, logger=logger)
 
     # Check for missing runs
-    logger.info("Checking for missing calibration runs...")
-    missing_cmds = check_missing_runs(country.country_name, access_rates, output_dir, repetitions)
-    if missing_cmds:
-        logger.info(f"Found {len(missing_cmds)} missing runs. Re-running these simulations...")
-        successful, failed_commands = utils.multiprocess(missing_cmds, utils.get_optimal_worker_count(), logger)
-        logger.info(f"Re-run completed: {successful} successful, {len(failed_commands)} failed.")
-        if failed_commands:
-            logger.warning("Some commands still failed after re-run. Check logs for details.")
+    # logger.info("Checking for missing calibration runs...")
+    # missing_cmds = check_missing_runs(country.country_name, access_rates, output_dir, repetitions)
+    # if missing_cmds:
+    #     logger.info(f"Found {len(missing_cmds)} missing runs. Re-running these simulations...")
+    #     successful, failed_commands = utils.multiprocess(missing_cmds, utils.get_optimal_worker_count(), logger)
+    #     logger.info(f"Re-run completed: {successful} successful, {len(failed_commands)} failed.")
+    #     if failed_commands:
+    #         logger.warning("Some commands still failed after re-run. Check logs for details.")
 
     # Summarize calibration results
     logger.info("Summarizing calibration results...")

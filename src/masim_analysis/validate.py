@@ -206,7 +206,7 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
     logger.info("Validation post-processing completed.")
 
 
-def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = Path("output")):
+def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = Path("output"), scaling: float = 0.25):
     """
     run the validation pipeline for a MaSim model for a given country.
 
@@ -263,7 +263,7 @@ def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = 
         calibration_str="",
         calibration=False,
     )
-    params["artificial_rescaling_of_population_size"] = 0.25
+    params["artificial_rescaling_of_population_size"] = scaling
     params["events"].extend(events)
     with open(Path("conf") / country_code.lower() / "test" / "validation_config.yaml", "w") as f:
         yaml.dump(params, f)
@@ -305,8 +305,15 @@ def main():
         default="output",
         help="Directory to store output files (default: 'output').",
     )
+    parser.add_argument(
+        "-s",
+        "--scaling",
+        type=float,
+        default=0.25,
+        help="Artificial rescaling of population size (default: 0.25).",
+    )
     args = parser.parse_args()
-    validate(args.country_code, args.repetitions, args.output_dir)
+    validate(args.country_code, args.repetitions, args.output_dir, args.scaling)
 
 
 if __name__ == "__main__":
