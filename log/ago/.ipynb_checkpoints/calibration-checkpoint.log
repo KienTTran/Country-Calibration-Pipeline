@@ -1,0 +1,96 @@
+2025-12-20 12:37:05 [INFO] Starting calibration for country: ago with 1 repetitions per parameter set.
+2025-12-20 12:37:05 [INFO] Access rates found in raster: [0.366, 0.41600000000000004, 0.446, 0.46, 0.465, 0.46799999999999997, 0.48, 0.494, 0.502, 0.5329999999999999, 0.54, 0.569, 0.573, 0.585, 0.594, 0.608, 0.638, 0.853]
+2025-12-20 12:37:05 [INFO] Running calibration simulations...
+2025-12-20 12:37:05 [INFO] Generating calibration commands...
+2025-12-20 12:37:09 [INFO] Generated 72 simulation commands
+2025-12-20 12:37:09 [INFO] Running calibration simulations via PBS
+2025-12-20 12:37:09 [INFO] Commands written to jobs/ago/calibration/cmds.txt
+2025-12-20 12:37:09 [INFO] Prepared PBS file: jobs/ago/calibration/script/job_template.pbs
+2025-12-20 12:37:09 [INFO] Prepared PBS file: jobs/ago/calibration/script/submit_jobs.pbs
+2025-12-20 12:37:09 [INFO] Submitting PBS dispatcher job...
+2025-12-20 12:37:09 [INFO] Waiting for all PBS jobs named 'ago_single_run' to finish...
+2025-12-20 12:37:14 [INFO] Queued jobs ago_single_run | Running (R): 30 | Ended (E): 0 | Total jobs (all states): 30
+2025-12-20 12:37:30 [INFO] Queued jobs ago_single_run | Running (R): 72 | Ended (E): 0 | Total jobs (all states): 72
+2025-12-20 12:37:45 [INFO] Queued jobs ago_single_run | Running (R): 72 | Ended (E): 0 | Total jobs (all states): 72
+2025-12-20 12:38:00 [INFO] Queued jobs ago_single_run | Running (R): 65 | Ended (E): 7 | Total jobs (all states): 72
+2025-12-20 12:38:15 [INFO] Queued jobs ago_single_run | Running (R): 63 | Ended (E): 9 | Total jobs (all states): 72
+2025-12-20 12:38:30 [INFO] Queued jobs ago_single_run | Running (R): 63 | Ended (E): 9 | Total jobs (all states): 72
+2025-12-20 12:38:45 [INFO] Queued jobs ago_single_run | Running (R): 63 | Ended (E): 9 | Total jobs (all states): 72
+2025-12-20 12:39:01 [INFO] Queued jobs ago_single_run | Running (R): 63 | Ended (E): 9 | Total jobs (all states): 72
+2025-12-20 12:39:16 [INFO] Queued jobs ago_single_run | Running (R): 61 | Ended (E): 9 | Total jobs (all states): 70
+2025-12-20 12:39:31 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 43 | Total jobs (all states): 43
+2025-12-20 12:39:46 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 34 | Total jobs (all states): 34
+2025-12-20 12:40:01 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 34 | Total jobs (all states): 34
+2025-12-20 12:40:16 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 34 | Total jobs (all states): 34
+2025-12-20 12:40:32 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 34 | Total jobs (all states): 34
+2025-12-20 12:40:47 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 34 | Total jobs (all states): 34
+2025-12-20 12:41:02 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 33 | Total jobs (all states): 33
+2025-12-20 12:41:17 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 1 | Total jobs (all states): 1
+2025-12-20 12:41:32 [INFO] All jobs for ago_single_run finished.
+2025-12-20 12:41:32 [INFO] 
+Calibration completed:
+2025-12-20 12:55:59 [INFO] Starting calibration for country: ago with 1 repetitions per parameter set.
+2025-12-20 12:55:59 [INFO] Access rates found in raster: [0.366, 0.41600000000000004, 0.446, 0.46, 0.465, 0.46799999999999997, 0.48, 0.494, 0.502, 0.5329999999999999, 0.54, 0.569, 0.573, 0.585, 0.594, 0.608, 0.638, 0.853]
+2025-12-20 12:55:59 [INFO] Running calibration simulations...
+2025-12-20 12:55:59 [INFO] Generating calibration commands...
+2025-12-20 12:56:04 [INFO] Generated 72 simulation commands
+2025-12-20 12:56:04 [INFO] Running calibration simulations via PBS
+2025-12-20 12:56:04 [INFO] Commands written to jobs/ago/calibration/cmds.txt
+2025-12-20 12:56:04 [INFO] Prepared PBS file: jobs/ago/calibration/script/job_template.pbs
+2025-12-20 12:56:04 [INFO] Prepared PBS file: jobs/ago/calibration/script/submit_jobs.pbs
+2025-12-20 12:56:04 [INFO] Submitting PBS dispatcher job...
+2025-12-20 12:56:04 [INFO] Waiting for all PBS jobs named 'ago_single_run' to finish...
+2025-12-20 12:56:09 [INFO] Queued jobs ago_single_run | Running (R): 32 | Ended (E): 0 | Total jobs (all states): 32
+2025-12-20 12:56:24 [INFO] Queued jobs ago_single_run | Running (R): 72 | Ended (E): 0 | Total jobs (all states): 72
+2025-12-20 12:56:39 [INFO] Queued jobs ago_single_run | Running (R): 72 | Ended (E): 0 | Total jobs (all states): 72
+2025-12-20 12:56:54 [INFO] Queued jobs ago_single_run | Running (R): 72 | Ended (E): 0 | Total jobs (all states): 72
+2025-12-20 12:57:10 [INFO] Queued jobs ago_single_run | Running (R): 62 | Ended (E): 10 | Total jobs (all states): 72
+2025-12-20 12:57:25 [INFO] Queued jobs ago_single_run | Running (R): 62 | Ended (E): 10 | Total jobs (all states): 72
+2025-12-20 12:57:40 [INFO] Queued jobs ago_single_run | Running (R): 62 | Ended (E): 10 | Total jobs (all states): 72
+2025-12-20 12:57:55 [INFO] Queued jobs ago_single_run | Running (R): 62 | Ended (E): 10 | Total jobs (all states): 72
+2025-12-20 12:58:10 [INFO] Queued jobs ago_single_run | Running (R): 49 | Ended (E): 21 | Total jobs (all states): 69
+2025-12-20 12:58:25 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 43 | Total jobs (all states): 43
+2025-12-20 12:58:41 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 33 | Total jobs (all states): 33
+2025-12-20 12:58:56 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 33 | Total jobs (all states): 33
+2025-12-20 12:59:11 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 33 | Total jobs (all states): 33
+2025-12-20 12:59:26 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 33 | Total jobs (all states): 33
+2025-12-20 12:59:41 [INFO] Queued jobs ago_single_run | Running (R): 0 | Ended (E): 30 | Total jobs (all states): 30
+2025-12-20 12:59:57 [INFO] All jobs for ago_single_run finished.
+2025-12-20 12:59:57 [INFO] 
+Calibration completed:
+2025-12-20 17:21:22 [INFO] Starting calibration for country: ago with 1 repetitions per parameter set.
+2025-12-20 17:21:22 [INFO] Access rates found in raster: [0.366, 0.41600000000000004, 0.446, 0.46, 0.465, 0.46799999999999997, 0.48, 0.494, 0.502, 0.5329999999999999, 0.54, 0.569, 0.573, 0.585, 0.594, 0.608, 0.638, 0.853]
+2025-12-20 17:21:22 [INFO] Running calibration simulations...
+2025-12-20 17:21:22 [INFO] Generating calibration commands...
+2025-12-20 17:21:40 [INFO] Generated 72 simulation commands
+2025-12-20 17:21:40 [INFO] Running calibration simulations via PBS
+2025-12-20 17:21:40 [INFO] Commands written to jobs/ago/calibration/cmds.txt
+2025-12-20 17:21:40 [INFO] Prepared PBS file: jobs/ago/calibration/script/job_template.pbs
+2025-12-20 17:21:40 [INFO] Prepared PBS file: jobs/ago/calibration/script/submit_jobs.pbs
+2025-12-20 17:21:40 [INFO] Submitting PBS dispatcher job...
+2025-12-20 17:21:41 [INFO] Waiting for all PBS jobs named 'ago_single_run' to finish...
+2025-12-20 17:21:46 [INFO] Queued jobs ago_single_run: Running (R): 31 | Finished (E): 0 | Total jobs (all states): 31
+2025-12-20 17:22:01 [INFO] Queued jobs ago_single_run: Running (R): 72 | Finished (E): 0 | Total jobs (all states): 72
+2025-12-20 17:22:16 [INFO] Queued jobs ago_single_run: Running (R): 72 | Finished (E): 0 | Total jobs (all states): 72
+2025-12-20 17:22:31 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 3 | Total jobs (all states): 72
+2025-12-20 17:22:46 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 3 | Total jobs (all states): 72
+2025-12-20 17:23:02 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 3 | Total jobs (all states): 72
+2025-12-20 17:23:17 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 3 | Total jobs (all states): 72
+2025-12-20 17:23:32 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 3 | Total jobs (all states): 72
+2025-12-20 17:23:47 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 3 | Total jobs (all states): 72
+2025-12-20 17:24:02 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 3 | Total jobs (all states): 72
+2025-12-20 17:24:17 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 0 | Total jobs (all states): 69
+2025-12-20 17:24:32 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 0 | Total jobs (all states): 69
+2025-12-20 17:24:48 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 0 | Total jobs (all states): 69
+2025-12-20 17:25:03 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 0 | Total jobs (all states): 69
+2025-12-20 17:25:18 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 0 | Total jobs (all states): 69
+2025-12-20 17:25:33 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 0 | Total jobs (all states): 69
+2025-12-20 17:25:48 [INFO] Queued jobs ago_single_run: Running (R): 69 | Finished (E): 0 | Total jobs (all states): 69
+2025-12-20 17:26:03 [INFO] Queued jobs ago_single_run: Running (R): 65 | Finished (E): 1 | Total jobs (all states): 66
+2025-12-20 17:26:19 [INFO] Queued jobs ago_single_run: Running (R): 61 | Finished (E): 0 | Total jobs (all states): 61
+2025-12-20 17:26:34 [INFO] Queued jobs ago_single_run: Running (R): 61 | Finished (E): 0 | Total jobs (all states): 61
+2025-12-20 17:26:49 [INFO] Queued jobs ago_single_run: Running (R): 61 | Finished (E): 0 | Total jobs (all states): 61
+2025-12-20 17:27:04 [INFO] Queued jobs ago_single_run: Running (R): 48 | Finished (E): 0 | Total jobs (all states): 48
+2025-12-20 17:27:19 [INFO] All jobs for ago_single_run finished.
+2025-12-20 17:27:19 [INFO] 
+Calibration completed:

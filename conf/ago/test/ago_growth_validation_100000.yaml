@@ -115,8 +115,8 @@ raster_db:
   - name: district
     raster: data/ago/calibration/ago_growth_validation_100000_districts.asc
   cell_size: 5
-  pf_treatment_under5: data/ago/calibration/ago_treatmentseeking.asc
-  pf_treatment_over5: data/ago/calibration/ago_treatmentseeking.asc
+  pr_treatment_under5: data/ago/calibration/ago_treatmentseeking.asc
+  pr_treatment_over5: data/ago/calibration/ago_treatmentseeking.asc
   age_distribution_by_location:
   - - 0.037
     - 0.132

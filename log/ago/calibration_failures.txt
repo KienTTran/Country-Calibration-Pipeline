@@ -1,0 +1,39 @@
+Calibration failures for ago
+Date: 2025-12-17
+
+Command: ./bin/MaSim -i conf/ago/calibration/cal_10000_0.0_0.001.yml -o output/ago/calibration/cal_10000_0.0_0.001_ -r SQLitePixelReporter -j 0
+Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+--------------------------------------------------------------------------------
+Command: ./bin/MaSim -i conf/ago/calibration/cal_10000_0.0_0.1.yml -o output/ago/calibration/cal_10000_0.0_0.1_ -r SQLitePixelReporter -j 0
+Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+--------------------------------------------------------------------------------
+Command: ./bin/MaSim -i conf/ago/calibration/cal_1000_0.0_0.001.yml -o output/ago/calibration/cal_1000_0.0_0.001_ -r SQLitePixelReporter -j 0
+Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+--------------------------------------------------------------------------------
+Command: ./bin/MaSim -i conf/ago/calibration/cal_100_0.0_0.1.yml -o output/ago/calibration/cal_100_0.0_0.1_ -r SQLitePixelReporter -j 0
+Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+--------------------------------------------------------------------------------
+Command: ./bin/MaSim -i conf/ago/calibration/cal_1000_0.0_0.01.yml -o output/ago/calibration/cal_1000_0.0_0.01_ -r SQLitePixelReporter -j 0
+Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+--------------------------------------------------------------------------------
+Command: ./bin/MaSim -i conf/ago/calibration/cal_10000_0.0_0.01.yml -o output/ago/calibration/cal_10000_0.0_0.01_ -r SQLitePixelReporter -j 0
+Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+--------------------------------------------------------------------------------
+Command: ./bin/MaSim -i conf/ago/calibration/cal_100_0.0_0.01.yml -o output/ago/calibration/cal_100_0.0_0.01_ -r SQLitePixelReporter -j 0
+Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+--------------------------------------------------------------------------------
+Command: ./bin/MaSim -i conf/ago/calibration/cal_100_0.0_0.001.yml -o output/ago/calibration/cal_100_0.0_0.001_ -r SQLitePixelReporter -j 0
+Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+--------------------------------------------------------------------------------
+Command: ./bin/MaSim -i conf/ago/calibration/cal_1000_0.0_0.1.yml -o output/ago/calibration/cal_1000_0.0_0.1_ -r SQLitePixelReporter -j 0
+Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+--------------------------------------------------------------------------------

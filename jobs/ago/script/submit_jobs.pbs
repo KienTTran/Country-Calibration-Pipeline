@@ -1,0 +1,30 @@
+#!/bin/bash
+#PBS -N submit_ago
+#PBS -l select=1:ncpus=1
+#PBS -q max
+
+cd "$PBS_O_WORKDIR"
+
+USER_NAME=$(whoami)
+
+get_job_count () {
+  qstat -u "$USER_NAME" 2>/dev/null | awk 'NR>5 && NF>0 {c++} END{print c+0}'
+}
+
+INDEX=0
+while IFS= read -r CMD; do
+  if [[ -n "$CMD" ]]; then
+    while [ "$(get_job_count)" -ge "$MAX_ACTIVE_JOBS" ]; do
+      sleep "$SLEEP"
+    done
+
+    qsub -N "ago" \
+         -v INDEX="$INDEX",CMD="$CMD" \
+         -o "../log/${INDEX}.out" \
+         -e "../log/${INDEX}.err" \
+         job_template.pbs
+
+    ((INDEX++))
+  fi
+done < "$CMD_FILE"
+echo "Submitted $INDEX jobs."

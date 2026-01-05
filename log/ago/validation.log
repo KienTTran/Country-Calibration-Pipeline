@@ -1,0 +1,70 @@
+2025-12-17 20:42:32 [INFO] Starting validation for country: ago
+2025-12-17 20:42:32 [INFO] Validation configuration file created.
+2025-12-17 20:42:32 [INFO] Generated 1 validation commands to execute.
+2025-12-17 20:42:32 [INFO] Starting validation runs...
+2025-12-17 20:42:32 [ERROR] Failed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLitePixelReporter -j 0
+2025-12-17 20:42:32 [ERROR] Error: 
+2025-12-17 20:42:33 [INFO] Validation runs completed: 0 successful, [('./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLitePixelReporter -j 0', '')] failed.
+2025-12-18 21:15:19 [INFO] Starting validation for country: ago
+2025-12-18 21:15:19 [INFO] Validation configuration file created.
+2025-12-18 21:15:19 [INFO] Generated 1 validation commands to execute.
+2025-12-18 21:15:19 [INFO] Starting validation runs...
+2025-12-18 21:15:28 [ERROR] Failed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLitePixelReporter -j 0
+2025-12-18 21:15:28 [ERROR] Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+2025-12-18 21:15:29 [INFO] Validation runs completed: 0 successful, [('./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLitePixelReporter -j 0', 'ERROR! Unknown reporter type: SQLitePixelReporter\n')] failed.
+2025-12-18 21:16:25 [INFO] Starting validation for country: ago
+2025-12-18 21:16:25 [INFO] Validation configuration file created.
+2025-12-18 21:16:25 [INFO] Generated 1 validation commands to execute.
+2025-12-18 21:16:25 [INFO] Starting validation runs...
+2025-12-18 21:16:32 [ERROR] Failed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLitePixelReporter -j 0
+2025-12-18 21:16:32 [ERROR] Error: ERROR! Unknown reporter type: SQLitePixelReporter
+
+2025-12-18 21:16:32 [INFO] Validation runs completed: 0 successful, [('./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLitePixelReporter -j 0', 'ERROR! Unknown reporter type: SQLitePixelReporter\n')] failed.
+2025-12-18 21:18:14 [INFO] Starting validation for country: ago
+2025-12-18 21:18:14 [INFO] Validation configuration file created.
+2025-12-18 21:18:14 [INFO] Generated 1 validation commands to execute.
+2025-12-18 21:18:14 [INFO] Starting validation runs...
+2025-12-18 21:22:04 [INFO] Successfully executed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLiteMonthlyReporter -j 0
+2025-12-18 21:22:04 [INFO] Validation runs completed: 1 successful, [] failed.
+2025-12-18 21:50:18 [INFO] Starting validation for country: ago
+2025-12-18 21:50:18 [INFO] Validation configuration file created.
+2025-12-18 21:50:18 [INFO] Generated 1 validation commands to execute.
+2025-12-18 21:50:18 [INFO] Starting validation runs...
+2025-12-18 21:54:13 [INFO] Successfully executed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLiteMonthlyReporter -j 0
+2025-12-18 21:54:13 [INFO] Validation runs completed: 1 successful, [] failed.
+2025-12-18 22:01:50 [INFO] Starting validation for country: ago
+2025-12-18 22:01:50 [INFO] Validation configuration file created.
+2025-12-18 22:01:50 [INFO] Generated 1 validation commands to execute.
+2025-12-18 22:01:50 [INFO] Starting validation runs...
+2025-12-18 22:04:19 [INFO] Successfully executed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLiteMonthlyReporter -j 0
+2025-12-18 22:04:19 [INFO] Validation runs completed: 1 successful, [] failed.
+2025-12-18 22:04:53 [INFO] Starting validation for country: ago
+2025-12-18 22:04:53 [INFO] Validation configuration file created.
+2025-12-18 22:04:53 [INFO] Generated 1 validation commands to execute.
+2025-12-18 22:04:53 [INFO] Starting validation runs...
+2025-12-18 22:07:29 [INFO] Successfully executed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLiteMonthlyReporter -j 0
+2025-12-18 22:07:29 [INFO] Validation runs completed: 1 successful, [] failed.
+2025-12-18 22:08:57 [INFO] Starting validation for country: ago
+2025-12-18 22:08:57 [INFO] Validation configuration file created.
+2025-12-18 22:08:57 [INFO] Generated 1 validation commands to execute.
+2025-12-18 22:08:57 [INFO] Starting validation runs...
+2025-12-18 22:11:26 [INFO] Successfully executed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLiteMonthlyReporter -j 0
+2025-12-18 22:11:26 [INFO] Validation runs completed: 1 successful, [] failed.
+2025-12-18 22:12:43 [INFO] Starting validation for country: ago
+2025-12-18 22:12:43 [INFO] Validation configuration file created.
+2025-12-18 22:12:43 [INFO] Generated 1 validation commands to execute.
+2025-12-18 22:12:43 [INFO] Starting validation runs...
+2025-12-18 22:15:11 [INFO] Successfully executed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLiteMonthlyReporter -j 0
+2025-12-18 22:15:11 [INFO] Validation runs completed: 1 successful, [] failed.
+2025-12-18 22:35:35 [INFO] Starting validation for country: ago
+2025-12-18 22:35:35 [INFO] Validation configuration file created.
+2025-12-18 22:35:35 [INFO] Generated 1 validation commands to execute.
+2025-12-18 22:35:35 [INFO] Starting validation runs...
+2025-12-18 22:38:01 [INFO] Successfully executed command: ./bin/MaSim -i conf/ago/test/validation_config.yaml -o output/ago/validation/validation_config_ -r SQLiteMonthlyReporter -j 0
+2025-12-18 22:38:01 [INFO] Validation runs completed: 1 successful, [] failed.
+2025-12-18 22:38:02 [INFO]  0 clinical episodes | SCALED:  0
+2025-12-18 22:38:02 [INFO]  891 population | SCALED:  17,813,333
+2025-12-18 22:38:02 [INFO] Prevalence comparison data saved.
+2025-12-18 22:38:03 [INFO] Prevalence fit plot saved.
+2025-12-18 22:38:03 [INFO] Validation post-processing completed.

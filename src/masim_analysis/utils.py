@@ -308,3 +308,141 @@ def multiprocess(cmds: list[str], max_workers: int, logger: logging.Logger) -> t
                     logger.error(f"Error: {error_msg}")
 
     return successful_runs, failed_commands
+
+def prepare_pbs_files(country_code: str, base_dir: str, logger):
+    import shutil
+
+    script_dir = os.path.join(base_dir, "script")
+    log_dir = os.path.join(base_dir, "log")
+
+    os.makedirs(script_dir, exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # If log dir exist, rename it to log_before_<current day>, then create a new log dir
+    if os.path.exists(log_dir):
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        new_log_dir = f"{log_dir}_before_{timestamp}"
+        shutil.move(log_dir, new_log_dir)
+        logger.info(f"Existing log directory renamed to {new_log_dir}")
+        os.makedirs(log_dir, exist_ok=True)
+        
+
+    for fname in ("job_template.template", "submit_jobs.template"):
+        src = os.path.join("scripts", fname)
+        dst = os.path.join(script_dir, fname.replace(".template", ".pbs"))
+
+        with open(src, "r") as f:
+            text = f.read().replace("#JOB_NAME#", country_code)
+
+        with open(dst, "w") as f:
+            f.write(text)
+
+        os.chmod(dst, 0o755)
+
+        logger.info(f"Prepared PBS file: {dst}")
+
+    return script_dir, log_dir
+
+def pbs_counts_qselect(user: str, country_code: str, jobname_target: str) -> tuple[int, int]:
+    
+    total_out_submit = subprocess.run(
+        ["qselect", "-u", user, "-N", f"submit_{country_code}"],
+        capture_output=True, text=True
+    )
+    total_out_submit = sum(1 for x in total_out_submit.stdout.splitlines() if x.strip())
+    
+    total_out = subprocess.run(
+        ["qselect", "-u", user, "-N", jobname_target],
+        capture_output=True, text=True
+    )
+    total = sum(1 for x in total_out.stdout.splitlines() if x.strip()) + total_out_submit
+
+    run_out = subprocess.run(
+        ["qselect", "-u", user, "-N", jobname_target, "-s", "R"],
+        capture_output=True, text=True
+    )
+    running = sum(1 for x in run_out.stdout.splitlines() if x.strip())
+
+    ended_out = subprocess.run(
+        ["qselect", "-u", user, "-N", jobname_target, "-s", "E"],
+        capture_output=True, text=True
+    )
+    ended = sum(1 for x in ended_out.stdout.splitlines() if x.strip())
+
+    return running, ended, total
+
+
+def submit_and_wait_pbs(cmds, country_code, logger, type,
+                        max_active_jobs=500, sleep_sec=15):
+
+    import subprocess, time, getpass
+    
+    user = getpass.getuser()
+    os.makedirs("./jobs", exist_ok=True)
+    base_dir = os.path.join("jobs", country_code, type)
+    os.makedirs(base_dir, exist_ok=True)    
+    cmds_path = os.path.join(base_dir, "cmds.txt")
+
+    # write cmds.txt
+    with open(cmds_path, "w") as f:
+        for c in cmds:
+            f.write(f"{c}")
+
+    logger.info(f"Commands written to {cmds_path}")
+
+    script_dir, log_dir = prepare_pbs_files(country_code, base_dir, logger)
+    
+    jobname_target = f"{country_code}_single_run"
+    
+    env = (
+        f"CMD_FILE=../cmds.txt,"
+        f"MAX_ACTIVE_JOBS={max_active_jobs},"
+        f"SLEEP={sleep_sec},"
+        f"PROJECT_DIR={Path.cwd().resolve()}"
+    )
+
+    logger.info("Submitting PBS dispatcher job...")
+    
+    subprocess.run(
+        [
+            "qsub",
+            "-v", env,
+            "-o", "submit.output",
+            "-e", "submit.error",
+            "submit_jobs.pbs",
+        ],
+        cwd=script_dir,
+        check=True,
+    )
+
+    logger.info(f"Waiting for all PBS jobs named '{jobname_target}' to finish...")
+
+    time.sleep(5)  # allow jobs to appear
+    
+    total_jobs = len(cmds)
+
+    while True:
+        running, ended, total = pbs_counts_qselect(user, country_code, jobname_target)
+    
+        if total == 0:
+            break
+        
+        #count output files in output dir
+        output_dir = os.path.join("output",country_code,type)
+        finished_outputs = len([name for name in os.listdir(output_dir) if name.endswith(".db")])
+    
+        logger.info(f"Submitted jobs {jobname_target}: Running (R): {running} | Finished (E): {ended} | Total: {total} | Outputs: {finished_outputs}/{total_jobs} ({(finished_outputs/total_jobs)*100:.2f}%)")
+        time.sleep(sleep_sec)
+    
+    logger.info(f"All jobs for {jobname_target} finished.")
+
+def check_error_cmds(log_dir: str, logger) -> list[str]:
+    error_inputs = []
+    for file in os.listdir(log_dir):
+        if file.endswith(".error") and os.path.getsize(os.path.join(log_dir, file)) > 0:
+            input = file.replace(".error", ".yml")
+            error_inputs.append(input)
+                
+    return error_inputs
+

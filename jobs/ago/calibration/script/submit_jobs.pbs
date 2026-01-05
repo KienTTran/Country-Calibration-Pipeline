@@ -1,0 +1,74 @@
+#!/bin/bash
+#PBS -N submit_ago
+#PBS -l select=1:ncpus=1
+#PBS -q max
+
+cd "$PBS_O_WORKDIR"
+
+USER_NAME=$(whoami)
+
+get_job_count () {
+  qselect -u "$USER_NAME" -N "ago_single_run" 2>/dev/null | wc -l
+}
+
+# Extract yml base name from a CMD line:
+# Example:
+#   ./bin/MaSim -i conf/ago/calibration/cal_500_0.48_0.05.yml -o ...
+# -> cal_500_0.48_0.05
+get_yml_base () {
+  local cmd="$1"
+  local yml
+
+  # Pull the token after "-i"
+  yml=$(echo "$cmd" | awk '{
+    for (i=1; i<=NF; i++) {
+      if ($i=="-i" && (i+1)<=NF) { print $(i+1); exit }
+    }
+  }')
+
+  if [[ -z "$yml" ]]; then
+    echo ""
+    return
+  fi
+
+  # Keep only filename, strip .yml
+  yml=$(basename "$yml")
+  yml="${yml%.yml}"
+
+  # Sanitize (keep letters, numbers, dot, dash, underscore)
+  yml=$(echo "$yml" | sed 's/[^A-Za-z0-9._-]/_/g')
+
+  echo "$yml"
+}
+
+INDEX=0
+while IFS= read -r CMD; do
+  [[ -z "$CMD" ]] && continue
+
+  while [ "$(get_job_count)" -ge "$MAX_ACTIVE_JOBS" ]; do
+    sleep "$SLEEP"
+  done
+
+  base=$(get_yml_base "$CMD")
+  if [[ -z "$base" ]]; then
+    base="idx_${INDEX}"
+  fi
+
+  # Avoid overwriting if duplicate base names exist
+  out="../log/${base}.output"
+  err="../log/${base}.error"
+  if [[ -e "$out" || -e "$err" ]]; then
+    out="../log/${base}__${INDEX}.output"
+    err="../log/${base}__${INDEX}.error"
+  fi
+
+  qsub -N "ago_single_run" \
+       -v INDEX="$INDEX",CMD="$CMD",PROJECT_DIR="$PROJECT_DIR" \
+       -o "$out" \
+       -e "$err" \
+       job_template.pbs
+
+  ((INDEX++))
+done < "$CMD_FILE"
+
+echo "Submitted $INDEX jobs."

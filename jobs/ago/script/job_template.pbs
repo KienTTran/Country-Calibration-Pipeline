@@ -1,0 +1,11 @@
+#!/bin/bash
+#PBS -N ago_run_$INDEX
+#PBS -l select=1:ncpus=1
+#PBS -l walltime=04:00:00
+#PBS -q max
+
+cd $PBS_O_WORKDIR
+
+echo "Running job ago $INDEX"
+echo "Command: $CMD"
+eval "$CMD"

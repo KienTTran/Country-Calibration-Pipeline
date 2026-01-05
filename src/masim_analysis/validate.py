@@ -116,14 +116,14 @@ def _prevelance_comparison(
         A merged DataFrame containing observed prevalence ('obs'), predicted
         prevalence ('mean_2_to_10', 'mean_under_5') and population columns.
     """
-    ave_cases = ave_cases.drop(columns="clinicalepisodes")
-    months = ave_cases["monthlydataid"].unique()
+    ave_cases = ave_cases.drop(columns="clinical_episodes")
+    months = ave_cases["monthly_data_id"].unique()
     ending_month = months[-13]
     ave_cases_year = (
-        ave_cases[ave_cases["monthlydataid"].between(ending_month - 12, ending_month, inclusive="left")]
-        .groupby("locationid")
+        ave_cases[ave_cases["monthly_data_id"].between(ending_month - 12, ending_month, inclusive="left")]
+        .groupby("unit_id")
         .sum()
-        .drop(columns="monthlydataid")
+        .drop(columns="monthly_data_id")
     )
     ave_cases_year["mean"] = ave_cases_year.mean(axis=1)
 
@@ -206,7 +206,7 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
     logger.info("Validation post-processing completed.")
 
 
-def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = Path("output")):
+def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = Path("output"), scaling: float = 0.25):
     """
     run the validation pipeline for a MaSim model for a given country.
 
@@ -263,7 +263,7 @@ def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = 
         calibration_str="",
         calibration=False,
     )
-    params["artificial_rescaling_of_population_size"] = 0.25
+    params["artificial_rescaling_of_population_size"] = scaling
     params["events"].extend(events)
     with open(Path("conf") / country_code.lower() / "test" / "validation_config.yaml", "w") as f:
         yaml.dump(params, f)
@@ -272,7 +272,7 @@ def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = 
         Path("conf") / country_code.lower() / "test" / "validation_config.yaml",
         Path(output_dir) / country_code.lower() / "validation",
         repetitions,
-        True,
+        False,
     )
     logger.info(f"Generated {len(cmds)} validation commands to execute.")
     # Create output directory if it doesn't exist
@@ -281,9 +281,53 @@ def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = 
 
     # Execute commands using multiprocessing
     logger.info("Starting validation runs...")
-    max_workers = utils.get_optimal_worker_count()
-    successful, failed = utils.multiprocess(cmds, max_workers, logger)
-    logger.info(f"Validation runs completed: {successful} successful, {failed} failed.")
+    
+    logger.info("Running validation simulations via PBS")
+
+    utils.submit_and_wait_pbs(
+        cmds=cmds,
+        country_code=country.country_code,
+        type="validation",
+        logger=logger,
+    )
+
+    logger.info("\nRunning validation completed")
+    
+    # check and return failed runs for 2 times, 
+    # then give up and exit if error still exists    
+    run_error_cmds = []
+    for attempt in range(2):    
+        run_error_cmds = utils.check_error_cmds(
+            os.path.join("jobs", country.country_code, type, "log"),
+            logger
+        )
+        if run_error_cmds:
+            logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
+            utils.submit_and_wait_pbs(
+                cmds=run_error_cmds,
+                country_code=country.country_code,
+                type=type,
+                logger=logger,
+            )
+        else:
+            break    
+      
+    # Final check for any remaining failed runs
+    run_error_cmds = utils.check_error_cmds(
+        os.path.join("jobs", country.country_code, type, "log"),
+        logger
+    )
+    
+    if run_error_cmds:
+        logger.error(f"There are still {len(run_error_cmds)} failed runs after retries. Please check the logs for details.")
+        exit()
+    else:
+        logger.info("All validation runs completed successfully.")
+        
+    # max_workers = utils.get_optimal_worker_count()
+    # successful, failed = utils.multiprocess(cmds, max_workers, logger)
+    # logger.info(f"Validation runs completed: {successful} successful, {failed} failed.")
+    
     # Post-processing
     post_process(country, params, logger)
 
@@ -305,8 +349,15 @@ def main():
         default="output",
         help="Directory to store output files (default: 'output').",
     )
+    parser.add_argument(
+        "-s",
+        "--scaling",
+        type=float,
+        default=0.25,
+        help="Artificial rescaling of population size (default: 0.25).",
+    )
     args = parser.parse_args()
-    validate(args.country_code, args.repetitions, args.output_dir)
+    validate(args.country_code, args.repetitions, args.output_dir, args.scaling)
 
 
 if __name__ == "__main__":

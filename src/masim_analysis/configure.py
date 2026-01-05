@@ -522,6 +522,8 @@ class CountryParams:
     target_case_count: int
     lower_bound_case_count: int
     upper_bound_case_count: int
+    calibration_betas: list[float]
+    calibration_population_bins: list[int]
 
     def to_dict(self):
         out = asdict(self)
@@ -547,6 +549,8 @@ class CountryParams:
             target_case_count=data["target_case_count"],
             lower_bound_case_count=data["lower_bound_case_count"],
             upper_bound_case_count=data["upper_bound_case_count"],
+            calibration_betas=data["calibration_betas"],
+            calibration_population_bins=data["calibration_population_bins"],
         )
 
     @staticmethod
@@ -878,9 +882,13 @@ def create_seasonal_model_rainfall(enable: bool, country_code: str, period: int 
             "period": period,
         },
     }
+<<<<<<< HEAD
+
+=======
+>>>>>>> 024dab2 (Update to use qsub to run more calibrations on clusters)
 
 
-def create_seasonal_model_pattern(enable: bool, country_code: str, period: int = 365) -> dict:
+def create_seasonal_model_pattern(enable: bool, country_code: str, period: int = 365, is_single_location: bool = False) -> dict:
     """Create a seasonality configuration block for MaSim.
 
     The function returns a dictionary describing how rainfall/seasonality data
@@ -907,7 +915,7 @@ def create_seasonal_model_pattern(enable: bool, country_code: str, period: int =
         "mode": "pattern",
         "pattern": {
             "admin_level": "district",
-            "filename": os.path.join("data", country_code, f"{country_code}_seasonality.csv"),
+            "filename": os.path.join("data", country_code, f"{country_code}_seasonality_1_location.csv") if is_single_location else os.path.join("data", country_code, f"{country_code}_seasonality.csv"),
             "period": period,
         },
     }
@@ -1024,8 +1032,13 @@ def create_raster_db(
         # "district_raster": os.path.join(data_root, f"{name}{calibration_string}_districts.asc"),asdasd
         "administrative_boundaries": [administrative_boundaries],
         "cell_size": 5,
+<<<<<<< HEAD
         "pr_treatment_under5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
         "pr_treatment_over5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
+=======
+        "pr_treatment_under5": os.path.join(data_root, f"{name}_treatmentseeking_{access_rate}.asc") if access_rate >= 0.0 else os.path.join(data_root, f"{name}_treatmentseeking.asc")  ,
+        "pr_treatment_over5": os.path.join(data_root, f"{name}_treatmentseeking_{access_rate}.asc") if access_rate >= 0.0 else os.path.join(data_root, f"{name}_treatmentseeking.asc"),
+>>>>>>> 024dab2 (Update to use qsub to run more calibrations on clusters)
         "age_distribution_by_location": [age_distribution],
         "p_treatment_for_less_than_5_by_location": [access_rate],
         "p_treatment_for_more_than_5_by_location": [access_rate],
@@ -1058,6 +1071,7 @@ def configure(
     population_scalar: float = 0.25,  # pass to validate
     access_rate_override: float = -1.0,  # pass to validate
     calibration: bool = False,
+    is_single_location: bool = False,
 ) -> dict:
     """Assemble the full MaSim execution control dictionary.
 
@@ -1113,7 +1127,7 @@ def configure(
         country_code, calibration, calibration_str, access_rate_override, age_distribution, beta_override
     )
     execution_control["spatial_model"] = create_spatial_model(calibration)
-    execution_control["seasonal_info"] = create_seasonal_model_pattern(True, country_code)
+    execution_control["seasonal_info"] = create_seasonal_model_pattern(True, country_code,365,is_single_location)
     execution_control["parasite_density_level"] = asdict(parasite_density_level)
     execution_control["immune_system_information"] = asdict(immune_system_information)
     execution_control["circulation_info"] = asdict(circulation_info)

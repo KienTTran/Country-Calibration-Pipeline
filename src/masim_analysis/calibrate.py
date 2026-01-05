@@ -44,16 +44,12 @@ from ruamel.yaml.emitter import EmitterError
 from scipy.optimize import curve_fit
 
 from masim_analysis import analysis, configure, utils
-from masim_analysis.commands import batch_generate_commands
+from masim_analysis.commands import batch_generate_commands, generate_commands
 from masim_analysis.configure import CountryParams
 # from masim_analysis.commands import setup_directories
 
 
 yaml = YAML()
-
-# Calibration constants
-BETAS = [0.001, 0.005, 0.01, 0.0125, 0.015, 0.02, 0.03, 0.04, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.8, 1]
-POPULATION_BINS = [10, 20, 30, 40, 50, 75, 100, 250, 500, 1000, 2000, 5000, 10000, 15000, 20000]
 
 
 # ==== Configuration generation ====
@@ -66,6 +62,7 @@ def generate_configuration_files(
     initial_age_structure: list[int],
     age_distribution: list[float],
     # seasonality_file_name: str = "seasonality",
+    population_scalar: float,
     strategy_db: dict[int, dict[str, str | list[int]]] = configure.STRATEGY_DB,
     # events: Optional[list[dict]] = None,
     logger: Optional[logging.Logger] = None,
@@ -114,6 +111,9 @@ def generate_configuration_files(
     start = date(calibration_year - 11, 1, 1)
     end = date(calibration_year + 1, 12, 31)
     # Create default execution control dictionary
+    
+    POPULATION_BINS = CountryParams.load(name=country_code).calibration_population_bins 
+    BETAS = CountryParams.load(name=country_code).calibration_betas
 
     # Generate the configuration files
     for pop in POPULATION_BINS:
@@ -131,12 +131,13 @@ def generate_configuration_files(
                     strategy_db,
                     f"{pop}_{access}_{beta}",
                     beta,
-                    1.0,
+                    population_scalar,
                     access,
                     True,
+                    True
                 )
 
-                write_pixel_data_files(execution_control["raster_db"], pop)
+                write_pixel_data_files(execution_control["raster_db"], pop, access)
                 output_path = os.path.join("conf", country_code, "calibration", f"cal_{pop}_{access}_{beta}.yml")
                 try:
                     yaml.dump(execution_control, open(output_path, "w"))
@@ -145,7 +146,7 @@ def generate_configuration_files(
                         logger.error(f"Error writing YAML file {output_path}: {e}")
 
 
-def write_pixel_data_files(raster_db: dict, population: int):
+def write_pixel_data_files(raster_db: dict, population: int, access: float):
     """Write per-pixel ASCII files required by MaSim for a single population.
 
     The function expects ``raster_db`` to contain keys such as
@@ -171,16 +172,24 @@ def write_pixel_data_files(raster_db: dict, population: int):
 
     with open(raster_db["pr_treatment_under5"], "w") as file:
         file.write(
+<<<<<<< HEAD
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
         )
     with open(raster_db["pr_treatment_over5"], "w") as file:
         file.write(
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
+=======
+            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{access}"
+        )
+    with open(raster_db["pr_treatment_over5"], "w") as file:
+        file.write(
+            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{access}"
+>>>>>>> 024dab2 (Update to use qsub to run more calibrations on clusters)
         )
 
 
 def generate_calibration_commands(
-    country: CountryParams, access_rates: list[float], repetitions: int = 20, output_directory: Path = Path("output")
+    country: CountryParams, access_rates: list[float], repetitions: int = 20, population_scalar: float = 1.0, output_directory: Path = Path("output"),
 ) -> list[str]:
     """Generate shell command strings to run calibration simulations.
 
@@ -219,6 +228,7 @@ def generate_calibration_commands(
         country.death_rate,
         country.initial_age_structure,
         country.age_distribution,
+        population_scalar,
         strategy_db=strategy_db,
     )
 
@@ -264,6 +274,10 @@ def check_missing_runs(
     """
     base_file_path = os.path.join(output_dir, country_code, "calibration")
     missing_cmds: list[str] = []
+    
+    POPULATION_BINS = CountryParams.load(name=country_code).calibration_population_bins 
+    BETAS = CountryParams.load(name=country_code).calibration_betas
+    
     for pop in POPULATION_BINS:
         for access in access_rates:
             for beta in BETAS:
@@ -273,13 +287,13 @@ def check_missing_runs(
                     try:
                         # Attempt to read the monthly data and monthly site data
                         # If the file exists, it will be read successfully
-                        _months = analysis.get_table(file, "monthlydata")
-                        _monthlysitedata = analysis.get_table(file, "monthlysitedata")
+                        _months = analysis.get_table(file, "monthly_data")
+                        _monthlysitedata = analysis.get_table(file, "monthly_site_data_district")
                     except FileNotFoundError:
                         # with open(f"missing_calibration_runs_{pop}.txt", "a") as f:
                         #     # f.write(f"{e}\n")
                         #     f.write(
-                        #         f"./bin/MaSim -i ./conf/{country_code}/calibration/cal_{pop}_{access}_{beta}.yml -o ./output/{country_code}/calibration/cal_{pop}_{access}_{beta}_ -r SQLiteDistrictReporter -j {i + 1}\n"
+                        #         f"./bin/MaSim -i ./conf/{country_code}/calibration/cal_{pop}_{access}_{beta}.yml -o ./output/{country_code}/calibration/cal_{pop}_{access}_{beta}_ -r SQLiteMonthlyReporter -j {i + 1}\n"
                         #     )
                         # if not os.path.exists(f"missing_calibration_runs_{pop}_job.sh"):
                         #     with open(f"missing_calibration_runs_{pop}_job.sh", "w") as f:
@@ -291,7 +305,7 @@ def check_missing_runs(
                         #         f.write("cd $PBS_O_WORKDIR\n")
                         #         f.write(f"torque-launch missing_calibration_runs_{pop}.txt\n")
                         missing_cmds.append(
-                            f"./bin/MaSim -i ./conf/{country_code}/calibration/cal_{pop}_{access}_{beta}.yml -o ./output/{country_code}/calibration/cal_{pop}_{access}_{beta}_ -r SQLitePixelReporter -j {i + 1}"
+                            f"./bin/MaSim -i ./conf/{country_code}/calibration/cal_{pop}_{access}_{beta}.yml -o ./output/{country_code}/calibration/cal_{pop}_{access}_{beta}_ -r SQLiteMonthlyReporter -j {i + 1}"
                         )
                         continue
     return missing_cmds
@@ -417,7 +431,7 @@ def fit_log_sigmoid_model(
         NaNs may be used depending on internal error handling.
     """
     # X = beta"].values
-    # y = group["pfpr2to10"].values
+    # y = group["pfpr_2to10"].values
 
     # Convert betas and pfpr to np arrays for element-wise operations
     betas = np.array(betas)
@@ -515,7 +529,7 @@ def get_beta_models(
                 continue
 
             group = group.copy()  # Create a copy to avoid SettingWithCopyWarning
-            pfpr = group["pfpr2to10"].to_numpy()
+            pfpr = group["pfpr_2to10"].to_numpy()
             beta = group["beta"].to_numpy()
             coefs = fit_log_sigmoid_model(beta, pfpr, pfpr_cutoff)
             if coefs.size == 0:
@@ -747,55 +761,55 @@ def get_last_year_statistics(
     -------
     A tuple containing three DataFrames: mean_cases, mean_prevalence, mean_population
     """
-    months = ave_cases["monthlydataid"].unique()
+    months = ave_cases["monthly_data_id"].unique()
     end_month = months[-13]
     start_month = end_month - 12
 
     mean_cases = (
-        ave_cases.loc[ave_cases["monthlydataid"].between(start_month, end_month, inclusive="left")]
+        ave_cases.loc[ave_cases["monthly_data_id"].between(start_month, end_month, inclusive="left")]
         .copy()
-        .groupby("locationid")
+        .groupby("unit_id")
         .sum()
     )
-    mean_cases = mean_cases.drop(columns=["monthlydataid"])
-    mean_cases = mean_cases.drop(columns=["clinicalepisodes"])
+    mean_cases = mean_cases.drop(columns=["monthly_data_id"])
+    mean_cases = mean_cases.drop(columns=["clinical_episodes"])
     mean_cases["mean"] = mean_cases.mean(axis=1)
     mean_cases["std"] = mean_cases.std(axis=1)
 
     mean_population = (
-        ave_population.loc[ave_population["monthlydataid"].between(start_month, end_month, inclusive="left")]
+        ave_population.loc[ave_population["monthly_data_id"].between(start_month, end_month, inclusive="left")]
         .copy()
-        .groupby("locationid")
+        .groupby("unit_id")
         .mean()
     )
-    mean_population = mean_population.drop(columns=["monthlydataid"])
+    mean_population = mean_population.drop(columns=["monthly_data_id"])
     mean_population = mean_population.drop(columns=["population"])
     mean_population["mean"] = mean_population.mean(axis=1)
     mean_population["std"] = mean_population.std(axis=1)
 
     mean_prevalence_2_to_10 = (
         ave_prevalence_2_to_10.loc[
-            ave_prevalence_2_to_10["monthlydataid"].between(start_month, end_month, inclusive="left")
+            ave_prevalence_2_to_10["monthly_data_id"].between(start_month, end_month, inclusive="left")
         ]
         .copy()
-        .groupby("locationid")
+        .groupby("unit_id")
         .mean()
     )
-    mean_prevalence_2_to_10 = mean_prevalence_2_to_10.drop(columns=["monthlydataid"])
-    mean_prevalence_2_to_10 = mean_prevalence_2_to_10.drop(columns=["pfpr2to10"])
+    mean_prevalence_2_to_10 = mean_prevalence_2_to_10.drop(columns=["monthly_data_id"])
+    mean_prevalence_2_to_10 = mean_prevalence_2_to_10.drop(columns=["pfpr_2to10"])
     mean_prevalence_2_to_10["mean"] = mean_prevalence_2_to_10.mean(axis=1)
     mean_prevalence_2_to_10["std"] = mean_prevalence_2_to_10.std(axis=1)
 
     mean_prevalence_under_5 = (
         ave_prevalence_under_5.loc[
-            ave_prevalence_under_5["monthlydataid"].between(start_month, end_month, inclusive="left")
+            ave_prevalence_under_5["monthly_data_id"].between(start_month, end_month, inclusive="left")
         ]
         .copy()
-        .groupby("locationid")
+        .groupby("unit_id")
         .mean()
     )
-    mean_prevalence_under_5 = mean_prevalence_under_5.drop(columns=["monthlydataid"])
-    mean_prevalence_under_5 = mean_prevalence_under_5.drop(columns=["pfprunder5"])
+    mean_prevalence_under_5 = mean_prevalence_under_5.drop(columns=["monthly_data_id"])
+    mean_prevalence_under_5 = mean_prevalence_under_5.drop(columns=["pfpr_under5"])
     mean_prevalence_under_5["mean"] = mean_prevalence_under_5.mean(axis=1)
     mean_prevalence_under_5["std"] = mean_prevalence_under_5.std(axis=1)
 
@@ -807,6 +821,7 @@ def run_calibration_simulations(
     country: CountryParams,
     access_rates: list[float],
     repetitions: int,
+    population_scalar: float,
     max_workers: Optional[int] = None,
     logger: Optional[logging.Logger] = None,
 ) -> None:
@@ -834,46 +849,97 @@ def run_calibration_simulations(
         logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
     logger.info("Generating calibration commands...")
-    cmds = generate_calibration_commands(country, access_rates, repetitions)
+    cmds = generate_calibration_commands(country, access_rates, repetitions,population_scalar)
     logger.info(f"Generated {len(cmds)} simulation commands")
 
     # Create output directory if it doesn't exist
     output_dir = os.path.join("output", country.country_code, "calibration")
     os.makedirs(output_dir, exist_ok=True)
+    
+    # # write cmds to a file for record-keeping, save in script/country-name
+    # country_script_dir = os.path.join("scripts", country.country_code)
+    # os.makedirs(country_script_dir, exist_ok=True)
+    # country_cmds_path = os.path.join(country_script_dir, "cmds.txt")
+    # with open(country_cmds_path, "w") as f:
+    #     for cmd in cmds:
+    #         f.write(f"{cmd}\n")
+    # logger.info(f"Calibration commands written to: {country_cmds_path}")
 
-    # Execute commands using multiprocessing
-    if max_workers is None:
-        max_workers = utils.get_optimal_worker_count()
+    # # Execute commands using multiprocessing
+    # if max_workers is None:
+    #     max_workers = utils.get_optimal_worker_count()
 
-    logger.info(f"Starting calibration with {max_workers} worker processes...")
+    # logger.info(f"Starting calibration with {max_workers} worker processes...")
 
-    successful, failed_commands = utils.multiprocess(cmds, max_workers, logger)
+    # successful, failed_commands = utils.multiprocess(cmds, max_workers, logger)
+    
+    logger.info("Running calibration simulations via PBS")
 
-    logger.info("\nCalibration completed:")
-    logger.info(f"  Successful runs: {successful}")
-    logger.info(f"  Failed runs: {len(failed_commands)}")
+    utils.submit_and_wait_pbs(
+        cmds=cmds,
+        country_code=country.country_code,
+        type="calibration",
+        logger=logger,
+    )
 
-    if failed_commands:
-        logger.info("Retrying failed commands.")
-        # Extract the command text
-        failed_commands = [cmd for (cmd, error) in failed_commands]
-        successful, failed_commands = utils.multiprocess(failed_commands, max_workers, logger)
+    logger.info("\nRunning calibration completed")
+    
+    # check and return failed runs for 2 times, 
+    # then give up and exit if error still exists    
+    run_error_cmds = []
+    for attempt in range(2):    
+        run_error_cmds = utils.check_error_cmds(
+            os.path.join("jobs", country.country_code, type, "log"),
+            logger
+        )
+        if run_error_cmds:
+            logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
+            utils.submit_and_wait_pbs(
+                cmds=run_error_cmds,
+                country_code=country.country_code,
+                type=type,
+                logger=logger,
+            )
+        else:
+            break    
+      
+    # Final check for any remaining failed runs
+    run_error_cmds = utils.check_error_cmds(
+        os.path.join("jobs", country.country_code, type, "log"),
+        logger
+    )
+    
+    if run_error_cmds:
+        logger.error(f"There are still {len(run_error_cmds)} failed runs after retries. Please check the logs for details.")
+        exit()
+    else:
+        logger.info("All calibration runs completed successfully.")
+    
+    # if has_error:
+    # logger.info(f"  Successful runs: {successful}")
+    # logger.info(f"  Failed runs: {len(failed_commands)}")
 
-    if failed_commands:
-        # Save failed commands to a file for debugging
-        failed_log_path = os.path.join("log", country.country_code, "calibration_failures.txt")
-        logger.info(f"There are {len(failed_commands)} failed commands. Writing these to a: {failed_log_path}")
-        os.makedirs(os.path.dirname(failed_log_path), exist_ok=True)
+    # if failed_commands:
+    #     logger.info("Retrying failed commands.")
+    #     # Extract the command text
+    #     failed_commands = [cmd for (cmd, error) in failed_commands]
+    #     successful, failed_commands = utils.multiprocess(failed_commands, max_workers, logger)
 
-        with open(failed_log_path, "w") as f:
-            f.write(f"Calibration failures for {country.country_code}\n")
-            f.write(f"Date: {date.today()}\n\n")
-            for cmd, error in failed_commands:
-                f.write(f"Command: {cmd}\n")
-                f.write(f"Error: {error}\n")
-                f.write("-" * 80 + "\n")
+    # if failed_commands:
+    #     # Save failed commands to a file for debugging
+    #     failed_log_path = os.path.join("log", country.country_code, "calibration_failures.txt")
+    #     logger.info(f"There are {len(failed_commands)} failed commands. Writing these to a: {failed_log_path}")
+    #     os.makedirs(os.path.dirname(failed_log_path), exist_ok=True)
 
-        logger.info(f"Failed commands logged to: {failed_log_path}")
+    #     with open(failed_log_path, "w") as f:
+    #         f.write(f"Calibration failures for {country.country_code}\n")
+    #         f.write(f"Date: {date.today()}\n\n")
+    #         for cmd, error in failed_commands:
+    #             f.write(f"Command: {cmd}\n")
+    #             f.write(f"Error: {error}\n")
+    #             f.write("-" * 80 + "\n")
+
+    #     logger.info(f"Failed commands logged to: {failed_log_path}")
 
 
 def _summarize_calibration_results(
@@ -914,11 +980,15 @@ def _summarize_calibration_results(
     """
     base_file_path = os.path.join(output_dir, country_code, "calibration")
     summary = DataFrame(
-        columns=["population", "access_rate", "beta", "iteration", "pfprunder5", "pfpr2to10", "pfprall"]
+        columns=["population", "access_rate", "beta", "iteration", "pfpr_under5", "pfpr_2to10", "pfpr_all"]
     )
     # comparison = date(comparison_year, 1, 1)
     # year_end = date(comparison_year + 1, 1, 1)
     # Process summary
+    
+    POPULATION_BINS = CountryParams.load(name=country_code).calibration_population_bins 
+    BETAS = CountryParams.load(name=country_code).calibration_betas
+    
     for pop in POPULATION_BINS:
         for access in access_rates:
             for beta in BETAS:
@@ -926,21 +996,21 @@ def _summarize_calibration_results(
                     filename = f"cal_{pop}_{access}_{beta}_monthly_data_{i}"
                     file = os.path.join(base_file_path, f"{filename}.db")
                     try:
-                        data = analysis.get_table(file, "monthlysitedata")
+                        data = analysis.get_table(file, "monthly_site_data_district")
                     except FileNotFoundError as _:
                         filename = f"cal_{pop}_{access}_{int(beta)}_monthly_data_{i}"  # TODO: #15 fix the masim file output to ensure consistent int/float digits
                         file = os.path.join(base_file_path, f"{filename}.db")
                         try:
-                            data = analysis.get_table(file, "monthlysitedata")
+                            data = analysis.get_table(file, "monthly_site_data_district")
                         except FileNotFoundError as e:
                             logging.warning(f"File not found: {e}")
                             continue
                     data = data.loc[
-                        data["monthlydataid"].between(comparison_start_month, comparison_end_month, inclusive="left")
+                        data["monthly_data_id"].between(comparison_start_month, comparison_end_month, inclusive="left")
                     ]
-                    summary.loc[filename] = data[["pfprunder5", "pfpr2to10", "pfprall"]].mean()
+                    summary.loc[filename] = data[["pfpr_under5", "pfpr_2to10", "pfpr_all"]].mean()
                     # mean_pop = data["population"].mean()
-                    # clinincal_episodes = data["clinicalepisodes"].sum()
+                    # clinincal_episodes = data["clinical_episodes"].sum()
                     # pfpr = clinincal_episodes / mean_pop
                     summary.loc[filename, "population"] = pop
                     summary.loc[filename, "access_rate"] = access
@@ -955,31 +1025,32 @@ def _summarize_calibration_results(
 def summarize_calibration_results(country: CountryParams, data_path: Path | str = Path("output")) -> DataFrame:
     data_path = Path(data_path)
     files = data_path.glob("*.db")
-
-    data = analysis.get_table(next(files), "monthlysitedata")
-    end_month = data["monthlydataid"].unique()[-13]
+       
+    data = analysis.get_table(next(files), "monthly_site_data_district")
+    end_month = data["monthly_data_id"].unique()[-13]
     summary = DataFrame(
-        columns=["population", "access_rate", "beta", "iteration", "pfprunder5", "pfpr2to10", "pfprall"]
+        columns=["population", "access_rate", "beta", "iteration", "pfpr_under5", "pfpr_2to10", "pfpr_all"]
     )
     for file in files:
-        data = analysis.get_table(file, "monthlysitedata")
-        end_month = data["monthlydataid"].unique()[-13]
+        print(file)
+        data = analysis.get_table(file, "monthly_site_data_district")
+        end_month = data["monthly_data_id"].unique()[-13]
         file_name = file.stem
         parts = file_name.split("_")
         pop = int(parts[1])
         access = float(parts[2])
         beta = float(parts[3])
         iteration = int(parts[-1])
-        data = data.loc[data["monthlydataid"].between(end_month - 12, end_month, inclusive="left")]
-        summary.loc[file_name] = data[["pfprunder5", "pfpr2to10", "pfprall"]].mean()
+        data = data.loc[data["monthly_data_id"].between(end_month - 12, end_month, inclusive="left")]
+        summary.loc[file_name] = data[["pfpr_under5", "pfpr_2to10", "pfpr_all"]].mean()
         summary.loc[file_name, "population"] = pop
         summary.loc[file_name, "access_rate"] = access
         summary.loc[file_name, "beta"] = beta
         summary.loc[file_name, "iteration"] = int(iteration)
 
-    summary["pfprunder5"] = summary["pfprunder5"].div(100)
-    summary["pfpr2to10"] = summary["pfpr2to10"].div(100)
-    summary["pfprall"] = summary["pfprall"].div(100)
+    summary["pfpr_under5"] = summary["pfpr_under5"].div(100)
+    summary["pfpr_2to10"] = summary["pfpr_2to10"].div(100)
+    summary["pfpr_all"] = summary["pfpr_all"].div(100)
     summary = summary.drop(columns=["iteration"])
     summary = summary.groupby(["population", "access_rate", "beta"]).mean().reset_index()
     return summary
@@ -987,7 +1058,7 @@ def summarize_calibration_results(country: CountryParams, data_path: Path | str 
     # summary.head(25)
 
 
-def calibrate(country_code: str, repetitions: int, output_dir: Path | str = Path("output")) -> None:
+def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.0, output_dir: Path | str = Path("output")) -> None:
     """
     Calibrate the MaSim model for a given country.
     """
@@ -1011,17 +1082,55 @@ def calibrate(country_code: str, repetitions: int, output_dir: Path | str = Path
 
     # Run calibration simulations
     logger.info("Running calibration simulations...")
-    run_calibration_simulations(country, access_rates, repetitions, logger=logger)
+    run_calibration_simulations(country, access_rates, repetitions, population_scalar, logger=logger)
 
     # Check for missing runs
     logger.info("Checking for missing calibration runs...")
-    missing_cmds = check_missing_runs(country.country_name, access_rates, output_dir, repetitions)
+    missing_cmds = check_missing_runs(country.country_code, access_rates, output_dir, repetitions)
     if missing_cmds:
         logger.info(f"Found {len(missing_cmds)} missing runs. Re-running these simulations...")
-        successful, failed_commands = utils.multiprocess(missing_cmds, utils.get_optimal_worker_count(), logger)
-        logger.info(f"Re-run completed: {successful} successful, {len(failed_commands)} failed.")
-        if failed_commands:
-            logger.warning("Some commands still failed after re-run. Check logs for details.")
+        
+        utils.submit_and_wait_pbs(
+            cmds=missing_cmds,
+            country_code=country.country_code,
+            logger=logger,
+        )
+
+        logger.info("\nRunning missing calibration completed")
+        
+        run_error_cmds = []
+        for attempt in range(2):    
+            run_error_cmds = utils.check_error_cmds(
+                os.path.join("jobs", country.country_code, "calibration", "log"),
+                logger
+            )
+            if run_error_cmds:
+                logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
+                utils.submit_and_wait_pbs(
+                    cmds=run_error_cmds,
+                    country_code=country.country_code,
+                    logger=logger,
+                )
+            else:
+                break    
+        
+        # Final check for any remaining failed runs
+        run_error_cmds = utils.check_error_cmds(
+            os.path.join("jobs", country.country_code, "calibration", "log"),
+            logger
+        )
+        
+        if run_error_cmds:
+            logger.error(f"There are still {len(run_error_cmds)} failed runs after retries. Please check the logs for details.")
+            exit()
+        else:
+            logger.info("All missing calibration runs completed successfully.")
+        
+        
+        # successful, failed_commands = utils.multiprocess(missing_cmds, utils.get_optimal_worker_count(), logger)
+        # logger.info(f"Re-run completed: {successful} successful, {len(failed_commands)} failed.")
+        # if failed_commands:
+        #     logger.warning("Some commands still failed after re-run. Check logs for details.")
 
     # Summarize calibration results
     logger.info("Summarizing calibration results...")
@@ -1029,7 +1138,7 @@ def calibrate(country_code: str, repetitions: int, output_dir: Path | str = Path
     means.to_csv(Path(output_dir) / country.country_code / "calibration" / "calibration_means.csv", index=False)
     logger.info("Fitting log-sigmoid models to calibration data...")
     models_map = get_beta_models(
-        populations=POPULATION_BINS,
+        populations=country.calibration_population_bins,
         access_rates=access_rates,
         means=means,
         pfpr_cutoff=0.0,
@@ -1070,10 +1179,10 @@ def plot_log_sigmoid_fits(
     if logger is None:
         logger = utils.get_country_logger(country.country_code, "calibration")
     # Plot all the model data, fits, and inverse fits on the same figure
-    num_rows = len(POPULATION_BINS)
+    num_rows = len(country.calibration_population_bins)
     num_cols = len(access_rates)
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(4 * num_cols, 4 * num_rows), sharex=True, sharey=True)
-    for i, population in enumerate(POPULATION_BINS):
+    for i, population in enumerate(country.calibration_population_bins):
         for j, treatment_access in enumerate(access_rates):
             try:
                 ax = axes[i, j]  # Select subplot location
@@ -1082,7 +1191,7 @@ def plot_log_sigmoid_fits(
             coefs = models_map[treatment_access][population]
             group = means[(means["population"] == population) & (means["access_rate"] == treatment_access)]
             betas = group["beta"].to_numpy()
-            pfpr = group["pfpr2to10"].to_numpy()
+            pfpr = group["pfpr_2to10"].to_numpy()
 
             ax.plot(betas, pfpr, ".", label="Data", color="black")
             X = np.linspace(1e-4, 10, 10000)
@@ -1093,7 +1202,7 @@ def plot_log_sigmoid_fits(
                 print(f"Error fitting sigmoid for Population: {population}, Access: {treatment_access} - {e}")
             ax.set_xscale("log")
             ax.set_xlabel("Beta")
-            ax.set_ylabel("pfpr2to10")
+            ax.set_ylabel("pfpr_2to10")
             ax.set_title(f"Population : {population}, Access : {treatment_access}")
             ax.legend(fontsize=7)
             ax.set_xlim(1e-3, 10)
@@ -1125,9 +1234,16 @@ def main():
         default="output",
         help="Directory to store output files (default: 'output').",
     )
+    parser.add_argument(
+        "-s",
+        "--population_scalar",
+        type=float,
+        default=1.0,
+        help="Population scale (0.1-1.0)",
+    )
     args = parser.parse_args()
 
-    calibrate(args.country_code, args.repetitions, args.output_dir)
+    calibrate(args.country_code, args.repetitions, args.population_scalar, args.output_dir)
 
 
 if __name__ == "__main__":

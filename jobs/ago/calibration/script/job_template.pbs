@@ -1,0 +1,12 @@
+#!/bin/bash
+#PBS -N ago_single_run
+#PBS -l select=1:ncpus=1
+#PBS -l walltime=04:00:00
+#PBS -q max
+
+#cd $PBS_O_WORKDIR
+cd $PROJECT_DIR || exit 1
+
+echo "Running job ago_single_run $INDEX"
+echo "Command: $CMD"
+eval "$CMD"
