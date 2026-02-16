@@ -173,23 +173,35 @@ def write_pixel_data_files(raster_db: dict, population: int, access: float):
     with open(raster_db["pr_treatment_under5"], "w") as file:
         file.write(
 <<<<<<< HEAD
+<<<<<<< HEAD
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
         )
     with open(raster_db["pr_treatment_over5"], "w") as file:
         file.write(
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
 =======
+=======
+>>>>>>> e3a5426 (Refactor code for v4.2)
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{access}"
         )
     with open(raster_db["pr_treatment_over5"], "w") as file:
         file.write(
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{access}"
+<<<<<<< HEAD
 >>>>>>> 024dab2 (Update to use qsub to run more calibrations on clusters)
+=======
+>>>>>>> e3a5426 (Refactor code for v4.2)
         )
 
 
 def generate_calibration_commands(
+<<<<<<< HEAD
     country: CountryParams, access_rates: list[float], repetitions: int = 20, population_scalar: float = 1.0, output_directory: Path = Path("output"),
+=======
+    country: CountryParams, access_rates: list[float], repetitions: int = 20, population_scalar: float = 1.0, 
+    output_directory: Path = Path("output"),
+    job_directory: Path = Path("jobs"),
+>>>>>>> e3a5426 (Refactor code for v4.2)
 ) -> list[str]:
     """Generate shell command strings to run calibration simulations.
 
@@ -236,9 +248,65 @@ def generate_calibration_commands(
     cmds = batch_generate_commands(
         Path("conf") / country.country_code / "calibration",
         output_directory / country.country_code / "calibration",
+        job_directory / country.country_code / "calibration" / "log",
         repetitions,
     )
     return cmds
+
+
+import sqlite3
+from pathlib import Path
+
+def format_float(x: float) -> str:
+    """Consistent float formatting for filenames."""
+    return f"{x:.6g}"
+
+
+def is_valid_sqlite(file: Path) -> bool:
+    """Check SQLite integrity and required tables."""
+    
+    if not file.exists():
+        return False
+    
+    if file.stat().st_size < 4096:
+        return False
+
+    try:
+        with sqlite3.connect(file) as conn:
+            cur = conn.cursor()
+
+            # integrity check
+            cur.execute("PRAGMA integrity_check;")
+            if cur.fetchone()[0] != "ok":
+                return False
+
+            # check required tables exist
+            cur.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='monthly_data'
+            """)
+            if cur.fetchone() is None:
+                return False
+
+            cur.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='monthly_site_data_district'
+            """)
+            if cur.fetchone() is None:
+                return False
+
+            # check table not empty
+            cur.execute("SELECT COUNT(*) FROM monthly_data")
+            if cur.fetchone()[0] == 0:
+                return False
+
+        return True
+
+    except sqlite3.DatabaseError:
+        return False
+
+    except Exception:
+        return False
 
 
 def check_missing_runs(
@@ -247,25 +315,18 @@ def check_missing_runs(
     output_dir: Path | str,
     repetitions: int = 20,
 ) -> list[str]:
-    """Check `output/<country>/calibration` for missing MaSim result files.
 
-    The function inspects the expected file naming pattern
-    ``cal_<pop>_<access>_<beta>_monthly_data_<iteration>.db`` for all
-    ``POPULATION_BINS`` x ``access_rates`` x ``BETAS`` x ``repetitions`` and
-    returns a list of command strings to re-run for any missing files.
+    output_dir = Path(output_dir)
+    base_path = output_dir / country_code / "calibration"
 
-    Parameters
-    ----------
-    country_code
-        Country code used to construct the output folder path.
-    access_rates
-        Treatment access rates (floats) expected in the outputs.
-    output_dir
-        Base output directory (usually ``output``) containing per-country
-        `calibration/` folders.
-    repetitions
-        Number of repetitions that should exist for each parameter set.
+    country = CountryParams.load(name=country_code)
 
+    POPULATION_BINS = country.calibration_population_bins
+    BETAS = country.calibration_betas
+
+    missing_cmds = []
+
+<<<<<<< HEAD
     Returns
     -------
     list[str]
@@ -278,10 +339,17 @@ def check_missing_runs(
     POPULATION_BINS = CountryParams.load(name=country_code).calibration_population_bins 
     BETAS = CountryParams.load(name=country_code).calibration_betas
     
+=======
+>>>>>>> e3a5426 (Refactor code for v4.2)
     for pop in POPULATION_BINS:
         for access in access_rates:
+            access_str = format_float(access)
+
             for beta in BETAS:
+                beta_str = format_float(beta)
+
                 for i in range(repetitions):
+<<<<<<< HEAD
                     filename = f"cal_{pop}_{access}_{beta}_monthly_data_{i + 1}"
                     file = os.path.join(base_file_path, f"{filename}.db")
                     try:
@@ -306,9 +374,87 @@ def check_missing_runs(
                         #         f.write(f"torque-launch missing_calibration_runs_{pop}.txt\n")
                         missing_cmds.append(
                             f"./bin/MaSim -i ./conf/{country_code}/calibration/cal_{pop}_{access}_{beta}.yml -o ./output/{country_code}/calibration/cal_{pop}_{access}_{beta}_ -r SQLiteMonthlyReporter -j {i + 1}"
+=======
+
+                    filename = f"cal_{pop}_{access_str}_{beta_str}_monthly_data_{i}.db"
+                    file = base_path / filename
+
+                    if not is_valid_sqlite(file):
+
+                        cmd = (
+                            f"./bin/MaSim "
+                            f"-i ./conf/{country_code}/calibration/cal_{pop}_{access_str}_{beta_str}.yml "
+                            f"-o ./output/{country_code}/calibration/cal_{pop}_{access_str}_{beta_str}_ "
+                            f"-r SQLiteMonthlyReporter "
+                            f"-j {i}"
+>>>>>>> e3a5426 (Refactor code for v4.2)
                         )
-                        continue
+
+                        missing_cmds.append(cmd)
+
     return missing_cmds
+
+import os
+from pathlib import Path
+
+def format_float(x: float) -> str:
+    return f"{x:.6g}"
+
+def check_missing_runs_exists_only_calibration(
+    country_code: str,
+    access_rates: list[float],
+    output_dir: Path | str,
+    repetitions: int = 20,
+) -> list[str]:
+
+    output_dir = Path(output_dir)
+    base_path = output_dir / country_code / "calibration"
+
+    country = CountryParams.load(name=country_code)
+    POPULATION_BINS = country.calibration_population_bins
+    BETAS = country.calibration_betas
+
+    # Scan directory once
+    existing = set()
+    if base_path.exists():
+        with os.scandir(base_path) as it:
+            for e in it:
+                if e.is_file() and e.name.endswith(".db"):
+                    existing.add(e.name)
+
+    missing_cmds: list[str] = []
+
+    for pop in POPULATION_BINS:
+        for access in access_rates:
+            access_str = format_float(access)
+
+            for beta in BETAS:
+                beta_str = format_float(beta)
+
+                # FIX: 0 → repetitions-1
+                for i in range(repetitions):
+
+                    db_name = f"cal_{pop}_{access_str}_{beta_str}_monthly_data_{i}.db"
+
+                    if db_name not in existing:
+                        missing_cmds.append(
+                            f"./bin/MaSim "
+                            f"-i ./conf/{country_code}/calibration/cal_{pop}_{access_str}_{beta_str}.yml "
+                            f"-o ./output/{country_code}/calibration/cal_{pop}_{access_str}_{beta_str}_ "
+                            f"-r SQLiteMonthlyReporter "
+                            f"-j {i}"
+                        )
+
+    # De-dup
+    seen = set()
+    out = []
+    for c in missing_cmds:
+        if c not in seen:
+            seen.add(c)
+            out.append(c)
+
+    return out
+
 
 
 # ==== Fitting functions ====
@@ -562,180 +708,202 @@ def load_beta_model(filename: str) -> dict:
     return numeric
 
 
+import numpy as np
+
+
 def create_beta_map(
     models_map: dict[float, dict[int, list[float]]],
-    population_raster: npt.NDArray,
-    access_rate_raster: npt.NDArray,
-    prevalence_raster: npt.NDArray,
-) -> npt.NDArray:
-    """Generate a raster of `beta` values from fitted models and inputs.
-
-    For each cell in ``population_raster`` the function selects the nearest
-    population key from ``models_map`` and uses the access-rate cell and the
-    observed pfpr (from ``prevalence_raster``) to invert the fitted sigmoid
-    and compute an estimated ``beta``. Cells with NaN inputs are preserved as
-    NaN in the output.
-
-    Parameters
-    ----------
-    models_map
-        Nested mapping: access_rate -> population_bin -> fitted coefficients
-        (``[a, b, c]``) returned by the fitting routines.
-    population_raster
-        2-D array of per-cell population values.
-    access_rate_raster
-        2-D array of per-cell treatment access rates (floats).
-    prevalence_raster
-        2-D array of per-cell PfPR (fractions 0..1) used to infer beta.
-
-    Returns
-    -------
-    numpy.ndarray
-        2-D array shaped like ``population_raster`` containing estimated
-        ``beta`` values on a per-cell basis.
+    population_raster: np.ndarray,
+    access_rate_raster: np.ndarray,
+    prevalence_raster: np.ndarray,
+    *,
+    eps: float = 1e-6,
+    dtype=np.float32,
+) -> np.ndarray:
     """
-    # Create a beta map
-    beta_map = np.zeros_like(population_raster)
-    # Naive implementation of beta map
+    Generate a raster of beta values from fitted models and inputs.
+
+    Fixes vs old version:
+    - beta_map is FLOAT dtype (not inherited from population dtype via zeros_like).
+    - Preserves NaNs: if any input is NaN, output stays NaN.
+    - Uses get_beta() which snaps float access_rate to nearest model key and uses sorted bins.
+    """
+    pop = population_raster.astype(dtype, copy=False)
+    acc = access_rate_raster.astype(dtype, copy=False)
+    pfpr = prevalence_raster.astype(dtype, copy=False)
+
+    beta_map = np.full(pop.shape, np.nan, dtype=dtype)
+
     rows, cols = beta_map.shape
     for r in range(rows):
         for c in range(cols):
+            p = pop[r, c]
+            a = acc[r, c]
+            y = pfpr[r, c]
+
+            if np.isnan(p) or np.isnan(a) or np.isnan(y):
+                continue
+
             beta_map[r, c] = get_beta(
-                models_map, access_rate_raster[r, c], population_raster[r, c], prevalence_raster[r, c]
+                models_map,
+                access_rate=float(a),
+                population=int(round(float(p))),
+                pfpr=float(y),
+                eps=eps,
             )
+
     return beta_map
 
 
 def get_beta(
-    models_map: dict[float, dict[int, list[float]]], access_rate: float, population: int, pfpr: float
+    models_map: dict[float, dict[int, list[float]]],
+    access_rate: float,
+    population: int,
+    pfpr: float,
+    *,
+    eps: float = 1e-6,
+    min_population: int = 10,
 ) -> float:
-    """Get the beta value for a given access rate, population, and pfpr target.
-
-    Retrieve an estimated ``beta`` for a single cell using the fitted model
-    coefficients in ``models_map``.
-
-    Behavior notes
-    --------------
-    - If ``population <= 10`` the function returns ``0.0`` (too small to model).
-    - If the access rate or population key is missing in ``models_map`` the
-      function logs an error and returns ``np.nan``.
-    - The inversion uses the closed-form inverse of the sigmoid on the log10
-      scale and returns ``10**beta_log``.
-
-    Parameters
-    ----------
-    models_map
-        Mapping access_rate -> population_bin -> coefficients ``[a, b, c]``.
-    access_rate
-        Treatment access rate (float) used to select the correct model.
-    population
-        Population integer value used to select the nearest population bin.
-    pfpr
-        Observed PfPR (fraction 0..1) to invert into a beta value.
-
-    Returns
-    -------
-    float
-        Estimated beta (positive float) or ``np.nan``/``0.0`` depending on
-        the error case or small-population rule.
     """
-    if np.isnan(access_rate) or np.isnan(population):
+    Robust inversion: (access_rate, population, pfpr) -> beta.
+
+    Model:
+      sigmoid(x,a,b,c) = a / (1 + exp(-b*(x - c)))
+    where x = log10(beta).
+
+    Inverse:
+      x = c - (1/b) * ln(a/pfpr - 1)
+      beta = 10**x
+
+    Fixes vs old version:
+    - Nearest-key lookup for float access_rate (avoids KeyError due to float precision).
+    - Sorted population bins; chooses largest bin <= population (else smallest).
+    - Clamps pfpr to (eps, a-eps) to avoid log domain errors.
+    - Returns NaN on invalid math (does not silently return 0), except population<=min_population returns 0.0.
+    """
+    if np.isnan(access_rate) or np.isnan(pfpr):
         return np.nan
-    # Find which population key to use by searching for the largest population less than or equal to the given population
-    populations = np.asarray(list(models_map[access_rate].keys())).squeeze()
-    if population <= 10:
-        # population = 10 # Maybe this should simply return a beta of 0?
-        return 0.0  ### <-- This is a change to return 0.0 for small populations
-    else:
-        population_key = np.argwhere(populations <= population).squeeze().tolist()
-        if type(population_key) is list:
-            if len(population_key) > 0:
-                population = int(populations[population_key[-1]])
-        else:
-            population = int(populations[population_key])
-    # Get the model
-    a = 0.0
-    b = 0.0
-    c = 0.0
-    try:
-        a, b, c = models_map[access_rate][population]
-    except TypeError:
-        coefs = models_map[access_rate][population]
-        a = coefs[0]
-        b = coefs[1]
-        c = coefs[2]
-    except KeyError as e:
-        logging.error(f"KeyError: {e} for access rate {access_rate} and population {population}")
+    if not models_map:
         return np.nan
-    except ValueError as e:
-        logging.error(f"ValueError: {e} for access rate {access_rate} and population {population}")
-        logging.error(f"Received the following coefficients: {models_map[access_rate][population]}")
+
+    # Keep your rule: tiny population returns 0 beta
+    if population <= min_population:
         return 0.0
-    # SMOOTH OUT THE BETA VALUE
-    # b *= 1.25
-    # Get the beta value
-    try:
-        beta_log = c - (1 / b) * np.log(a / pfpr - 1)
-    except ZeroDivisionError:
-        beta_log = np.nan
-    beta = 10**beta_log
-    if np.isnan(beta):
-        return 0
-    return beta
+
+    # --- snap access_rate to nearest available key
+    access_keys = np.array(sorted(models_map.keys()), dtype=float)
+    acc_key = float(access_keys[np.argmin(np.abs(access_keys - access_rate))])
+
+    pop_to_coefs = models_map.get(acc_key)
+    if not pop_to_coefs:
+        return np.nan
+
+    # --- choose population bin (largest <= population else smallest)
+    pop_bins = np.array(sorted(pop_to_coefs.keys()), dtype=int)
+    if pop_bins.size == 0:
+        return np.nan
+
+    le = pop_bins[pop_bins <= population]
+    pop_key = int(le[-1]) if le.size > 0 else int(pop_bins[0])
+
+    coefs = pop_to_coefs.get(pop_key)
+    if not coefs or len(coefs) < 3:
+        return np.nan
+
+    a, b, c = float(coefs[0]), float(coefs[1]), float(coefs[2])
+
+    if not np.isfinite(a) or not np.isfinite(b) or not np.isfinite(c):
+        return np.nan
+    if a <= 0.0 or abs(b) < 1e-12:
+        return np.nan
+
+    # Clamp pfpr to (0, a)
+    y = float(np.clip(pfpr, eps, a - eps))
+
+    inside = a / y - 1.0
+    if inside <= 0.0 or not np.isfinite(inside):
+        return np.nan
+
+    x_log10 = c - (1.0 / b) * np.log(inside)  # natural log here is correct for the inverse derivation
+    if not np.isfinite(x_log10):
+        return np.nan
+
+    beta = 10.0 ** x_log10
+    if not np.isfinite(beta) or beta <= 0.0:
+        return np.nan
+
+    return float(beta)
 
 
-def predicted_prevalence(models_map, population_raster, treatment, beta_map):
-    """Compute predicted PfPR map from a beta map and fitted models.
-
-    This function applies the forward sigmoid (using `sigmoid`) to the log10
-    of per-cell beta values to produce a predicted PfPR map. It mirrors the
-    logic of `create_beta_map` but performs the forward prediction step.
-
-    Parameters
-    ----------
-    models_map
-        Nested mapping of fitted model coefficients per access rate and
-        population bin.
-    population_raster
-        2-D population array.
-    treatment
-        2-D treatment access-rate raster array.
-    beta_map
-        2-D beta raster (same shape as `population_raster`).
-
-    Returns
-    -------
-    numpy.ndarray
-        2-D array of predicted PfPR (fractions 0..1).
+def predicted_prevalence(
+    models_map: dict[float, dict[int, list[float]]],
+    population_raster: np.ndarray,
+    treatment: np.ndarray,
+    beta_map: np.ndarray,
+    *,
+    eps: float = 1e-6,
+    dtype=np.float32,
+) -> np.ndarray:
     """
-    # Create a PfPR map
-    pfpr_map = np.zeros_like(population_raster)
-    # Naive implementation of PfPR map
+    Compute predicted PfPR map from a beta map and fitted models.
+
+    Fix vs old version:
+    - Uses log10(beta) (not ln(beta)) to match fitting (fit_log_sigmoid_model uses log10).
+    - Preserves NaNs.
+    """
+    pop = population_raster.astype(dtype, copy=False)
+    acc = treatment.astype(dtype, copy=False)
+    beta = beta_map.astype(dtype, copy=False)
+
+    pfpr_map = np.full(pop.shape, np.nan, dtype=dtype)
+
+    if not models_map:
+        return pfpr_map
+
+    access_keys = np.array(sorted(models_map.keys()), dtype=float)
     rows, cols = pfpr_map.shape
 
     for r in range(rows):
         for c in range(cols):
-            if np.isnan(treatment[r, c]) or np.isnan(population_raster[r, c]) or np.isnan(beta_map[r, c]):
-                pfpr_map[r, c] = np.nan
+            p = pop[r, c]
+            a = acc[r, c]
+            bval = beta[r, c]
+
+            if np.isnan(p) or np.isnan(a) or np.isnan(bval):
                 continue
-            access_rate = treatment[r, c]
-            population = population_raster[r, c]
-            populations = np.asarray(list(models_map[access_rate].keys())).squeeze()
-            if population <= 10:
-                population = 10
-            else:
-                population_key = np.argwhere(populations <= population).squeeze().tolist()
-                if type(population_key) is list:
-                    if len(population_key) > 0:
-                        population = int(populations[population_key[-1]])
-                else:
-                    population = int(populations[population_key])
-            coefs = models_map[access_rate][population]
-            try:
-                pfpr_map[r, c] = sigmoid(np.log(beta_map[r, c]), *coefs)
-            except Exception as e:
-                logging.error(f"Error occurred while calibrating PfPR at ({r}, {c}): {e}")
+            if bval <= 0:
+                continue
+
+            # Snap access rate to nearest key
+            acc_key = float(access_keys[np.argmin(np.abs(access_keys - float(a)))])
+            pop_to_coefs = models_map.get(acc_key)
+            if not pop_to_coefs:
+                continue
+
+            pop_bins = np.array(sorted(pop_to_coefs.keys()), dtype=int)
+            if pop_bins.size == 0:
+                continue
+
+            pop_int = int(round(float(p)))
+            if pop_int <= 10:
                 pfpr_map[r, c] = 0.0
+                continue
+
+            le = pop_bins[pop_bins <= pop_int]
+            pop_key = int(le[-1]) if le.size > 0 else int(pop_bins[0])
+
+            coefs = pop_to_coefs.get(pop_key)
+            if not coefs or len(coefs) < 3:
+                continue
+
+            A, B, C = float(coefs[0]), float(coefs[1]), float(coefs[2])
+            if A <= 0.0 or abs(B) < 1e-12:
+                continue
+
+            x = np.log10(float(bval) + eps)
+            y = A / (1.0 + np.exp(-B * (x - C)))
+            pfpr_map[r, c] = float(np.clip(y, 0.0, 1.0))
+
     return pfpr_map
 
 
@@ -762,7 +930,11 @@ def get_last_year_statistics(
     A tuple containing three DataFrames: mean_cases, mean_prevalence, mean_population
     """
     months = ave_cases["monthly_data_id"].unique()
+<<<<<<< HEAD
     end_month = months[-13]
+=======
+    end_month = months[-1] + 1
+>>>>>>> e3a5426 (Refactor code for v4.2)
     start_month = end_month - 12
 
     mean_cases = (
@@ -856,6 +1028,7 @@ def run_calibration_simulations(
     output_dir = os.path.join("output", country.country_code, "calibration")
     os.makedirs(output_dir, exist_ok=True)
     
+<<<<<<< HEAD
     # # write cmds to a file for record-keeping, save in script/country-name
     # country_script_dir = os.path.join("scripts", country.country_code)
     # os.makedirs(country_script_dir, exist_ok=True)
@@ -940,6 +1113,61 @@ def run_calibration_simulations(
     #             f.write("-" * 80 + "\n")
 
     #     logger.info(f"Failed commands logged to: {failed_log_path}")
+=======
+    job_dir = os.path.join("jobs", country.country_code, "calibration")
+    os.makedirs(job_dir, exist_ok=True)
+    
+    logger.info("Running calibration simulations via PBS")
+
+    utils.submit_and_wait_pbs(
+        cmds=cmds,
+        country_code=country.country_code,
+        run_type="calibration",
+        logger=logger,
+        rotate_logs=True,
+    )
+
+    logger.info("\nRunning calibration completed")
+    
+    cmds_path = os.path.join("jobs", country.country_code, "calibration", "cmds.txt")
+    try:
+        # check and return failed runs for 2 times, 
+        # then give up and exit if error still exists    
+        run_error_cmds = []
+        for attempt in range(2):    
+            run_error_cmds = utils.check_error_cmds(
+                os.path.join("jobs", country.country_code, "calibration", "log"),
+                cmds_path,
+                logger
+            )
+            if run_error_cmds:
+                logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
+                utils.submit_and_wait_pbs(
+                    cmds=run_error_cmds,
+                    country_code=country.country_code,
+                    run_type="calibration",
+                    logger=logger,
+                    rotate_logs=True,
+                )
+            else:
+                break    
+        
+        # Final check for any remaining failed runs
+        run_error_cmds = utils.check_error_cmds(
+            os.path.join("jobs", country.country_code, "calibration", "log"),
+            cmds_path,
+            logger
+        )
+        
+        if run_error_cmds:
+            logger.error(f"There are still {len(run_error_cmds)} failed runs after retries. Please check the logs for details.")
+            exit(1)
+        else:
+            logger.info("All calibration runs completed successfully.")
+    except Exception as e:
+        logger.exception(f"Post-calibration error checking crashed: {e}")
+        raise
+>>>>>>> e3a5426 (Refactor code for v4.2)
 
 
 def _summarize_calibration_results(
@@ -992,7 +1220,7 @@ def _summarize_calibration_results(
     for pop in POPULATION_BINS:
         for access in access_rates:
             for beta in BETAS:
-                for i in range(1, repetitions + 1):
+                for i in range(repetitions):
                     filename = f"cal_{pop}_{access}_{beta}_monthly_data_{i}"
                     file = os.path.join(base_file_path, f"{filename}.db")
                     try:
@@ -1018,7 +1246,7 @@ def _summarize_calibration_results(
                     summary.loc[filename, "iteration"] = int(i)
                     # summary.loc[filename, "pfpr"] = pfpr
 
-    # summary.to_csv(f"{base_file_path}/calibration_summary.csv")
+    summary.to_csv(f"{base_file_path}/calibration_summary.csv")
     return summary
 
 
@@ -1031,8 +1259,12 @@ def summarize_calibration_results(country: CountryParams, data_path: Path | str 
     summary = DataFrame(
         columns=["population", "access_rate", "beta", "iteration", "pfpr_under5", "pfpr_2to10", "pfpr_all"]
     )
+    count = 0
     for file in files:
+<<<<<<< HEAD
         print(file)
+=======
+>>>>>>> e3a5426 (Refactor code for v4.2)
         data = analysis.get_table(file, "monthly_site_data_district")
         end_month = data["monthly_data_id"].unique()[-13]
         file_name = file.stem
@@ -1047,6 +1279,9 @@ def summarize_calibration_results(country: CountryParams, data_path: Path | str 
         summary.loc[file_name, "access_rate"] = access
         summary.loc[file_name, "beta"] = beta
         summary.loc[file_name, "iteration"] = int(iteration)
+        count += 1
+        if count % 10000 == 0:
+            print(count,file)
 
     summary["pfpr_under5"] = summary["pfpr_under5"].div(100)
     summary["pfpr_2to10"] = summary["pfpr_2to10"].div(100)
@@ -1064,7 +1299,7 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
     """
     # Back up run to ensure output and log directories exist
     # setup_directories(country_code)
-
+    country_code = country_code.lower()
     # Set up logger
     logger = utils.get_country_logger(country_code, "calibration")
     logger.info(f"Starting calibration for country: {country_code} with {repetitions} repetitions per parameter set.")
@@ -1086,7 +1321,11 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
 
     # Check for missing runs
     logger.info("Checking for missing calibration runs...")
+<<<<<<< HEAD
     missing_cmds = check_missing_runs(country.country_code, access_rates, output_dir, repetitions)
+=======
+    missing_cmds = check_missing_runs_exists_only_calibration(country.country_code, access_rates, output_dir, repetitions)
+>>>>>>> e3a5426 (Refactor code for v4.2)
     if missing_cmds:
         logger.info(f"Found {len(missing_cmds)} missing runs. Re-running these simulations...")
         
@@ -1094,6 +1333,7 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
             cmds=missing_cmds,
             country_code=country.country_code,
             logger=logger,
+<<<<<<< HEAD
         )
 
         logger.info("\nRunning missing calibration completed")
@@ -1131,10 +1371,47 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
         # logger.info(f"Re-run completed: {successful} successful, {len(failed_commands)} failed.")
         # if failed_commands:
         #     logger.warning("Some commands still failed after re-run. Check logs for details.")
+=======
+            run_type="calibration",
+            rotate_logs=True,
+        )
+>>>>>>> e3a5426 (Refactor code for v4.2)
 
+        logger.info("\nRunning missing calibration completed")
+        
+        run_error_cmds = []
+        for attempt in range(2):    
+            run_error_cmds = utils.check_error_cmds(
+                os.path.join("jobs", country.country_code, "calibration", "log"),
+                logger
+            )
+            if run_error_cmds:
+                logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
+                utils.submit_and_wait_pbs(
+                    cmds=run_error_cmds,
+                    country_code=country.country_code,
+                    logger=logger,
+                    run_type="calibration",
+                    rotate_logs=True,
+                )
+            else:
+                break    
+        
+        # Final check for any remaining failed runs
+        run_error_cmds = utils.check_error_cmds(
+            os.path.join("jobs", country.country_code, "calibration", "log"),
+            logger
+        )
+        
+        if run_error_cmds:
+            logger.error(f"There are still {len(run_error_cmds)} failed runs after retries. Please check the logs for details.")
+            exit()
+        else:
+            logger.info("All missing calibration runs completed successfully.")
+            
     # Summarize calibration results
     logger.info("Summarizing calibration results...")
-    means = summarize_calibration_results(country, Path("output") / country.country_code / "calibration")
+    means = summarize_calibration_results(country, Path(output_dir) / country.country_code / "calibration")
     means.to_csv(Path(output_dir) / country.country_code / "calibration" / "calibration_means.csv", index=False)
     logger.info("Fitting log-sigmoid models to calibration data...")
     models_map = get_beta_models(
@@ -1146,16 +1423,16 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
 
     # Save the models map to a json file
     models_map_filename = "models_map.json"
-    with open(Path("data") / country.country_code / "calibration" / models_map_filename, "w") as f:  # noqa: F811, ruff disabled
+    with open(Path("data") / country.country_code / models_map_filename, "w") as f:  # noqa: F811, ruff disabled
         json.dump(models_map, f, indent=4)
-    logger.info(f"Saved models map to {Path('data') / country.country_code / 'calibration' / models_map_filename}")
+    logger.info(f"Saved models map to {Path('data') / country.country_code / models_map_filename}")
 
     # Plot the log-sigmoid fits
-
+    # fig = plot_log_sigmoid_fits(models_map, access_rates, means, country, logger)
     # Create beta map
     logger.info("Creating beta map...")
     population_raster, meta = utils.read_raster(
-        Path("data") / country.country_code / f"{country.country_code}_population_v2.asc"
+        Path("data") / country.country_code / f"{country.country_code}_population.asc"
     )
     access_rate_raster, _ = utils.read_raster(
         Path("data") / country.country_code / f"{country.country_code}_treatmentseeking.asc"
@@ -1163,11 +1440,14 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
     prevalence_raster, _ = utils.read_raster(
         Path("data") / country.country_code / f"{country.country_code}_pfpr2to10.asc"
     )
-    beta_map = create_beta_map(models_map, population_raster, access_rate_raster, prevalence_raster)
-    beta_map_filename = Path("data") / country.country_code / f"{country.country_code}_beta.asc"
-    utils.write_raster(beta_map, beta_map_filename, meta["xllcorner"], meta["yllcorner"], meta["cellsize"])
-    logger.info(f"Saved beta map to {beta_map_filename}")
-
+    try:
+        models_map = load_beta_model(Path("data") / country.country_code / models_map_filename)
+        beta_map = create_beta_map(models_map, population_raster, access_rate_raster, prevalence_raster)
+        beta_map_filename = Path("data") / country.country_code / f"{country.country_code}_beta.asc"
+        utils.write_raster(beta_map, beta_map_filename, meta["xllcorner"], meta["yllcorner"], meta["cellsize"])
+        logger.info(f"Saved beta map to {beta_map_filename}")
+    except Exception as e:
+        logger.error(f"Error creating beta map: {e}")
 
 def plot_log_sigmoid_fits(
     models_map: dict[float, dict[int, list[float]]],

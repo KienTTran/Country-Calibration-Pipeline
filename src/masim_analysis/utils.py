@@ -309,24 +309,40 @@ def multiprocess(cmds: list[str], max_workers: int, logger: logging.Logger) -> t
 
     return successful_runs, failed_commands
 
+<<<<<<< HEAD
 def prepare_pbs_files(country_code: str, base_dir: str, logger):
     import shutil
+=======
+def prepare_pbs_files(country_code: str, base_dir: str, logger, rotate_logs: bool = True):
+    import os, shutil
+    from datetime import datetime
+>>>>>>> e3a5426 (Refactor code for v4.2)
 
     script_dir = os.path.join(base_dir, "script")
     log_dir = os.path.join(base_dir, "log")
 
     os.makedirs(script_dir, exist_ok=True)
+<<<<<<< HEAD
     os.makedirs(log_dir, exist_ok=True)
     
     # If log dir exist, rename it to log_before_<current day>, then create a new log dir
     if os.path.exists(log_dir):
         from datetime import datetime
+=======
+
+    if rotate_logs and os.path.exists(log_dir):
+>>>>>>> e3a5426 (Refactor code for v4.2)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         new_log_dir = f"{log_dir}_before_{timestamp}"
         shutil.move(log_dir, new_log_dir)
         logger.info(f"Existing log directory renamed to {new_log_dir}")
+<<<<<<< HEAD
         os.makedirs(log_dir, exist_ok=True)
         
+=======
+
+    os.makedirs(log_dir, exist_ok=True)
+>>>>>>> e3a5426 (Refactor code for v4.2)
 
     for fname in ("job_template.template", "submit_jobs.template"):
         src = os.path.join("scripts", fname)
@@ -339,12 +355,21 @@ def prepare_pbs_files(country_code: str, base_dir: str, logger):
             f.write(text)
 
         os.chmod(dst, 0o755)
+<<<<<<< HEAD
 
+=======
+>>>>>>> e3a5426 (Refactor code for v4.2)
         logger.info(f"Prepared PBS file: {dst}")
 
     return script_dir, log_dir
 
+<<<<<<< HEAD
 def pbs_counts_qselect(user: str, country_code: str, jobname_target: str) -> tuple[int, int]:
+=======
+
+def pbs_counts_qselect(user: str, country_code: str, jobname_target: str) -> tuple[int, int, int]:
+    import subprocess
+>>>>>>> e3a5426 (Refactor code for v4.2)
     
     total_out_submit = subprocess.run(
         ["qselect", "-u", user, "-N", f"submit_{country_code}"],
@@ -373,6 +398,7 @@ def pbs_counts_qselect(user: str, country_code: str, jobname_target: str) -> tup
     return running, ended, total
 
 
+<<<<<<< HEAD
 def submit_and_wait_pbs(cmds, country_code, logger, type,
                         max_active_jobs=500, sleep_sec=15):
 
@@ -395,10 +421,45 @@ def submit_and_wait_pbs(cmds, country_code, logger, type,
     
     jobname_target = f"{country_code}_single_run"
     
+=======
+def submit_and_wait_pbs(cmds, country_code, logger, run_type,
+                        max_active_jobs=500, sleep_sec=15,
+                        rotate_logs=True):
+
+    import os
+    import subprocess, time, getpass
+    from pathlib import Path
+
+    if not cmds:
+        logger.warning("No commands to submit (cmds is empty). Nothing to do.")
+        return
+
+    user = getpass.getuser()
+    os.makedirs("jobs", exist_ok=True)
+
+    base_dir = os.path.join("jobs", country_code, run_type)
+    os.makedirs(base_dir, exist_ok=True)
+
+    cmds_path = os.path.join(base_dir, "cmds.txt")
+
+    # write cmds.txt (one command per line)
+    with open(cmds_path, "w") as f:
+        for c in cmds:
+            f.write(c.rstrip() + "\n")
+
+    logger.info(f"Commands written to {cmds_path}")
+
+    script_dir, log_dir = prepare_pbs_files(country_code, base_dir, logger, rotate_logs)
+
+    # IMPORTANT: this must match the -N used by your dispatcher for the jobs it creates
+    jobname_target = f"{country_code}_single_run"
+
+>>>>>>> e3a5426 (Refactor code for v4.2)
     env = (
         f"CMD_FILE=../cmds.txt,"
         f"MAX_ACTIVE_JOBS={max_active_jobs},"
         f"SLEEP={sleep_sec},"
+<<<<<<< HEAD
         f"PROJECT_DIR={Path.cwd().resolve()}"
     )
 
@@ -412,11 +473,26 @@ def submit_and_wait_pbs(cmds, country_code, logger, type,
             "-e", "submit.error",
             "submit_jobs.pbs",
         ],
+=======
+        f"PROJECT_DIR={Path.cwd().resolve()},"
+        f"JOBNAME_TARGET={jobname_target}"
+    )
+
+    logger.info("Submitting PBS dispatcher job...")
+
+    # write submit logs into base_dir so they don't overwrite each time
+    submit_out = os.path.join(base_dir, "submit.output")
+    submit_err = os.path.join(base_dir, "submit.error")
+
+    subprocess.run(
+        ["qsub", "-v", env, "-o", submit_out, "-e", submit_err, "submit_jobs.pbs"],
+>>>>>>> e3a5426 (Refactor code for v4.2)
         cwd=script_dir,
         check=True,
     )
 
     logger.info(f"Waiting for all PBS jobs named '{jobname_target}' to finish...")
+<<<<<<< HEAD
 
     time.sleep(5)  # allow jobs to appear
     
@@ -445,4 +521,85 @@ def check_error_cmds(log_dir: str, logger) -> list[str]:
             error_inputs.append(input)
                 
     return error_inputs
+=======
+    time.sleep(5)  # allow jobs to appear
+
+    total_jobs = len(cmds)
+    output_dir = os.path.join("output", country_code, run_type)
+
+    while True:
+        running, ended, total = pbs_counts_qselect(user, country_code, jobname_target)
+
+        # If qselect sees none of the target jobs, assume they're done
+        if total == 0:
+            break
+
+        if os.path.isdir(output_dir):
+            finished_outputs = sum(
+                1 for name in os.listdir(output_dir) if name.endswith(".db")
+            )
+        else:
+            finished_outputs = 0
+
+        pct = 100.0 * finished_outputs / total_jobs if total_jobs else 0.0
+        logger.info(
+            f"Jobs {jobname_target}: R={running} | E={ended} | Total={total} | "
+            f"Outputs: {finished_outputs}/{total_jobs} ({pct:.2f}%)"
+        )
+
+        time.sleep(sleep_sec)
+
+    logger.info(f"All jobs for {jobname_target} finished.")
+
+import os, re
+
+def check_error_cmds(log_dir: str, cmds_path: str, logger) -> list[str]:
+    if not os.path.isdir(log_dir):
+        return []
+
+    with open(cmds_path, "r") as f:
+        cmd_lines = [line.rstrip("\n") for line in f if line.strip()]
+
+    rerun_cmds = []
+    seen_idx = set()
+
+    # helper: find cmd indices that reference a given yml base
+    def find_indices_by_base(base: str) -> list[int]:
+        # matches ... -i .../<base>.yml (token-based-ish)
+        pat = re.compile(rf'(^|\s)-i\s+\S*/{re.escape(base)}\.yml(\s|$)')
+        hits = [i for i, cmd in enumerate(cmd_lines) if pat.search(cmd)]
+        return hits
+
+    for fn in os.listdir(log_dir):
+        if not fn.endswith(".error"):
+            continue
+        full = os.path.join(log_dir, fn)
+        if os.path.getsize(full) <= 0:
+            continue
+
+        # Case A: base__123.error -> exact index
+        m = re.search(r"__(\d+)\.error$", fn)
+        if m:
+            idx = int(m.group(1))
+            if 0 <= idx < len(cmd_lines) and idx not in seen_idx:
+                seen_idx.add(idx)
+                rerun_cmds.append(cmd_lines[idx])
+            continue
+
+        # Case B: base.error -> map by base name
+        base = fn[:-len(".error")]
+        idxs = find_indices_by_base(base)
+        if not idxs:
+            logger.warning(f"Cannot map error file to any cmd by base name: {fn}")
+            continue
+
+        for idx in idxs:
+            if idx not in seen_idx:
+                seen_idx.add(idx)
+                rerun_cmds.append(cmd_lines[idx])
+
+    return rerun_cmds
+
+
+>>>>>>> e3a5426 (Refactor code for v4.2)
 

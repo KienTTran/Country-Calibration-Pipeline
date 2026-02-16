@@ -38,7 +38,9 @@ yaml = YAML()
 
 def _averaging_pass(
     country: CountryParams,
+    output_dir: Path | str = Path("output"),
 ) -> tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame, DataFrame]:
+
     """Run averaging over validation `.db` outputs and write CSV summaries.
 
     This helper calls ``analysis.get_average_summary_statistics`` on the
@@ -57,6 +59,11 @@ def _averaging_pass(
         ``(ave_population, ave_cases, ave_prevalence_2_to_10, ave_cases_2_to_10,``
         ``ave_prevalence_under_5, ave_cases_under_5)``.
     """
+    
+    base_dir = Path(output_dir) / country.country_code / "validation"
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+
     (
         ave_population,
         ave_cases,
@@ -64,13 +71,13 @@ def _averaging_pass(
         ave_cases_2_to_10,
         ave_prevalence_under_5,
         ave_cases_under_5,
-    ) = analysis.get_average_summary_statistics(Path("output") / country.country_code / "validation")
-    ave_population.to_csv(Path("output") / country.country_code / "validation" / "ave_population.csv")
-    ave_cases.to_csv(Path("output") / country.country_code / "validation" / "ave_cases.csv")
-    ave_prevalence_2_to_10.to_csv(Path("output") / country.country_code / "validation" / "ave_prevalence_2_to_10.csv")
-    ave_cases_2_to_10.to_csv(Path("output") / country.country_code / "validation" / "ave_cases_2_to_10.csv")
-    ave_prevalence_under_5.to_csv(Path("output") / country.country_code / "validation" / "ave_prevalence_under_5.csv")
-    ave_cases_under_5.to_csv(Path("output") / country.country_code / "validation" / "ave_cases_under_5.csv")
+    ) = analysis.get_average_summary_statistics(base_dir)
+    ave_population.to_csv(base_dir / "ave_population.csv")
+    ave_cases.to_csv(base_dir / "ave_cases.csv")
+    ave_prevalence_2_to_10.to_csv(base_dir / "ave_prevalence_2_to_10.csv")
+    ave_cases_2_to_10.to_csv(base_dir / "ave_cases_2_to_10.csv")
+    ave_prevalence_under_5.to_csv(base_dir / "ave_prevalence_under_5.csv")
+    ave_cases_under_5.to_csv(base_dir / "ave_cases_under_5.csv")
 
     return (
         ave_population,
@@ -92,7 +99,7 @@ def _prevelance_comparison(
     """Prepare observed vs. predicted prevalence comparison table.
 
     The function extracts the final-year average case counts and merges the
-    observed prevalence raster (``data/<country>_pfpr210.asc``) with the
+    observed prevalence raster (``data/<country>_pfpr2to10.asc``) with the
     predicted prevalence summaries passed in ``mean_prevalence_2_to_10`` and
     ``mean_prevalence_under_5``. Predicted prevalence values are expected as
     percentages and are converted to fractions where appropriate.
@@ -118,7 +125,11 @@ def _prevelance_comparison(
     """
     ave_cases = ave_cases.drop(columns="clinical_episodes")
     months = ave_cases["monthly_data_id"].unique()
+<<<<<<< HEAD
     ending_month = months[-13]
+=======
+    ending_month = months[-1] + 1
+>>>>>>> e3a5426 (Refactor code for v4.2)
     ave_cases_year = (
         ave_cases[ave_cases["monthly_data_id"].between(ending_month - 12, ending_month, inclusive="left")]
         .groupby("unit_id")
@@ -128,7 +139,7 @@ def _prevelance_comparison(
     ave_cases_year["mean"] = ave_cases_year.mean(axis=1)
 
     # population, _ = utils.read_raster(Path("data") / country.country_code / f"{country.country_code}_population.asc")
-    prevalence_obs, _ = utils.read_raster(Path("data") / country.country_code / f"{country.country_code}_pfpr210.asc")
+    prevalence_obs, _ = utils.read_raster(Path("data") / country.country_code / f"{country.country_code}_pfpr2to10.asc")
     prevalence_obs = prevalence_obs.reshape(-1)
     prevalence_comp = mean_prevalence_2_to_10[["mean"]].copy().div(100).rename(columns={"mean": "mean_2_to_10"})
     prevalence_comp["mean_under_5"] = (
@@ -139,12 +150,12 @@ def _prevelance_comparison(
         index=np.arange(len(prevalence_obs[~np.isnan(prevalence_obs)])),
     )
     prevalence = prevalence_comp.merge(prev_obs, left_index=True, right_index=True, how="outer")
-    prevalence.merge(mean_population["mean"].rename("population"), left_index=True, right_index=True, how="outer")
-
+    prevalence = prevalence.merge(mean_population["mean"].rename("population"), left_index=True, right_index=True, how="outer")
+    
     return prevalence
 
 
-def post_process(country: CountryParams, params: dict, logger: logging.Logger | None = None):
+def post_process(country: CountryParams, params: dict, logger: logging.Logger | None = None, output_dir: Path | str = Path("output")):
     """Run validation post-processing: averaging, comparisons and plots.
 
     This routine runs the averaging pass over validation run outputs,
@@ -163,6 +174,14 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
     """
     if logger is None:
         logger = utils.get_country_logger(country.country_code, "validation")
+        
+    base_dir = Path(output_dir) / country.country_code / "validation"
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    # images is parallel to output_dir, not inside it
+    image_base = Path(output_dir).parent / "images"
+    image_dir = image_base / country.country_code
+    image_dir.mkdir(parents=True, exist_ok=True)
 
     # Validation post-processing averaging pass
     (
@@ -172,7 +191,7 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
         ave_cases_2_to_10,
         ave_prevalence_under_5,
         ave_cases_under_5,
-    ) = _averaging_pass(country)
+    ) = _averaging_pass(country, output_dir=output_dir)
 
     # Total case count verification
     mean_cases, mean_prevalence_2_to_10, mean_prevalence_under_5, mean_population = get_last_year_statistics(
@@ -189,7 +208,7 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
         country, ave_cases, mean_prevalence_2_to_10, mean_prevalence_under_5, mean_population
     )
     prevalence["population"] = mean_population["mean"]  # FIXED BUG HERE
-    prevalence.to_csv(Path("output") / country.country_code / "validation" / "prevalence_comparison.csv")
+    prevalence.to_csv(base_dir / "prevalence_comparison.csv")
     logger.info("Prevalence comparison data saved.")
     prevalence_fit = analysis.plot_prevalence_trend(
         prevalence["obs"].to_numpy(),
@@ -198,7 +217,7 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
         "2 to 10",
     )
     prevalence_fit.savefig(
-        Path("images") / country.country_code / "prevalence_fit_2_to_10.png",
+        image_dir / "prevalence_fit_2_to_10.png",
         dpi=300,
         bbox_inches="tight",
     )
@@ -206,7 +225,60 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
     logger.info("Validation post-processing completed.")
 
 
+<<<<<<< HEAD
 def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = Path("output"), scaling: float = 0.25):
+=======
+from pathlib import Path
+import os
+
+def check_missing_runs_exists_only_validation(
+    country_code: str,
+    output_dir: Path | str,
+    repetitions: int = 20,
+) -> list[str]:
+    country_code_l = country_code.lower()
+    output_dir = Path(output_dir)
+
+    # This function expects output_dir to be the BASE (e.g. "output"),
+    # and it will look in output/<country>/validation/
+    base_path = output_dir / country_code_l / "validation"
+
+    # Scan directory once
+    existing: set[str] = set()
+    if base_path.exists():
+        with os.scandir(base_path) as it:
+            for e in it:
+                if e.is_file() and e.name.endswith(".db"):
+                    existing.add(e.name)
+
+    missing_cmds: list[str] = []
+
+    # Config is written to conf/<country>/test/validation_config.yaml
+    cfg_path = Path("conf") / country_code_l / "test" / "validation_config.yaml"
+
+    # IMPORTANT: output prefix should align with whatever produces
+    # "validation_config_monthly_data_{i}.db" (adjust if your reporter differs)
+    out_prefix = output_dir / country_code_l / "validation" / "validation_config_"
+
+    for i in range(repetitions):
+        db_name = f"validation_config_monthly_data_{i}.db"
+        if db_name not in existing:
+            missing_cmds.append(
+                f"./bin/MaSim "
+                f"-i {cfg_path} "
+                f"-o {out_prefix} "
+                f"-r SQLiteMonthlyReporter "
+                f"-j {i}"
+            )
+
+    return missing_cmds
+
+
+def validate(country_code: str, repetitions: int = 50, 
+             output_dir: Path | str = Path("output"), 
+             job_dir: Path | str = Path("jobs"),
+             scaling: float = 0.25):
+>>>>>>> e3a5426 (Refactor code for v4.2)
     """
     run the validation pipeline for a MaSim model for a given country.
 
@@ -244,6 +316,12 @@ def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = 
     -------
     None
     """
+    if isinstance(output_dir, (float, int)) or isinstance(job_dir, (float, int)):
+        raise TypeError(
+            f"output_dir/job_dir must be path-like strings. Got output_dir={output_dir!r}, job_dir={job_dir!r}. "
+            f"Did you pass scaling as a positional argument?"
+        )
+
     country = CountryParams.load(name=country_code)
     logger = utils.get_country_logger(country_code, "validation")
     logger.info(f"Starting validation for country: {country_code}")
@@ -268,6 +346,7 @@ def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = 
     with open(Path("conf") / country_code.lower() / "test" / "validation_config.yaml", "w") as f:
         yaml.dump(params, f)
     logger.info("Validation configuration file created.")
+<<<<<<< HEAD
     _, cmds = commands.generate_commands(
         Path("conf") / country_code.lower() / "test" / "validation_config.yaml",
         Path(output_dir) / country_code.lower() / "validation",
@@ -330,6 +409,94 @@ def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = 
     
     # Post-processing
     post_process(country, params, logger)
+=======
+    try:
+        logger.info(f"DEBUG types: output_dir={output_dir!r} ({type(output_dir)}), job_dir={job_dir!r} ({type(job_dir)}), scaling={scaling!r} ({type(scaling)})")
+        _, cmds = commands.generate_commands(
+            Path("conf") / country_code.lower() / "test" / "validation_config.yaml",
+            Path(output_dir) / country_code.lower() / "validation",
+            Path(job_dir) / country.country_code / "validation" / "log",
+            repetitions,
+            False,
+        )
+        logger.info(f"Generated {len(cmds)} validation commands to execute.")
+        # Create output directory if it doesn't exist
+        output_dir = Path(output_dir)
+        out_dir_country_validation = output_dir / country.country_code.lower() / "validation"
+        out_dir_country_validation.mkdir(parents=True, exist_ok=True)
+
+        # Create job directory if it doesn't exist
+        job_dir = Path(job_dir) / country.country_code / "validation" / "log"
+        job_dir.mkdir(parents=True, exist_ok=True)
+
+        # Execute commands using multiprocessing
+        logger.info("Starting validation runs...")
+        
+        logger.info("Running validation simulations via PBS")
+
+        utils.submit_and_wait_pbs(
+            cmds=cmds,
+            country_code=country.country_code,
+            run_type="validation",
+            logger=logger,
+            rotate_logs=True,
+        )
+
+        logger.info("\nRunning validation completed")
+        
+        # Check for missing runs
+        logger.info("Checking for missing validation runs...")
+        missing_cmds = check_missing_runs_exists_only_validation(country.country_code, output_dir, repetitions)
+        if missing_cmds:
+            logger.info(f"Found {len(missing_cmds)} missing runs. Re-running these simulations...")
+            
+            utils.submit_and_wait_pbs(
+                cmds=missing_cmds,
+                country_code=country.country_code,
+                logger=logger,
+                run_type="validation",
+                rotate_logs=True,
+            )
+
+            logger.info("\nRunning missing validation completed")
+            
+            run_error_cmds = []
+            for attempt in range(2):    
+                run_error_cmds = utils.check_error_cmds(
+                    os.path.join("jobs", country.country_code, "validation", "log"),
+                    logger
+                )
+                if run_error_cmds:
+                    logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
+                    utils.submit_and_wait_pbs(
+                        cmds=run_error_cmds,
+                        country_code=country.country_code,
+                        logger=logger,
+                        run_type="validation",
+                        rotate_logs=True,
+                    )
+                else:
+                    break    
+            
+            # Final check for any remaining failed runs
+            run_error_cmds = utils.check_error_cmds(
+                os.path.join("jobs", country.country_code, "validation", "log"),
+                logger
+            )
+            
+            if run_error_cmds:
+                logger.error(f"There are still {len(run_error_cmds)} failed runs after retries. Please check the logs for details.")
+                exit()
+            else:
+                logger.info("All missing validation runs completed successfully.")
+    
+        # Post-processing
+        post_process(country, params, logger, output_dir=output_dir)
+        
+    except Exception as e:
+        logger.error(f"An error occurred during validation: {e}")
+        raise
+>>>>>>> e3a5426 (Refactor code for v4.2)
 
 
 def main():
@@ -357,8 +524,17 @@ def main():
         help="Artificial rescaling of population size (default: 0.25).",
     )
     args = parser.parse_args()
+<<<<<<< HEAD
     validate(args.country_code, args.repetitions, args.output_dir, args.scaling)
 
+=======
+    validate(
+        args.country_code,
+        repetitions=args.repetitions,
+        output_dir=args.output_dir,
+        scaling=args.scaling,
+    )
+>>>>>>> e3a5426 (Refactor code for v4.2)
 
 if __name__ == "__main__":
     main()

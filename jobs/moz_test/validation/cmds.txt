@@ -1,0 +1,2 @@
+./bin/MaSim -i conf/moz_test/test/validation_config.yaml -o output/moz_test/validation/validation_config_ -r SQLiteMonthlyReporter -j 0 2>&1 | tee jobs/moz_test/validation/log/single_run_validation_config.yaml_0.log
+./bin/MaSim -i conf/moz_test/test/validation_config.yaml -o output/moz_test/validation/validation_config_ -r SQLiteMonthlyReporter -j 1 2>&1 | tee jobs/moz_test/validation/log/single_run_validation_config.yaml_1.log

@@ -1,0 +1,28 @@
+#!/bin/bash
+#PBS -l walltime=240:00:00
+#PBS -N MOZ_TEST
+#PBS -q nd
+#PBS -l select=1:ncpus=1:host=nd04
+#PBS -o ./Mozambique_Test.output
+#PBS -e ./Mozambique_Test.error
+#PBS -m bae
+#PBS -M kientt@temple.edu
+
+cd $PBS_O_WORKDIR
+
+source .venv/bin/activate
+
+# Check if the calibrate command installed via the python venv is available
+if ! command -v calibrate &> /dev/null
+then
+    echo "calibrate command could not be found. Ensure the virtual environment is set up correctly."
+    exit 1
+fi
+
+calibrate moz_test -r 2
+
+echo "Calibration for Mozambique Test completed."
+echo "================================"
+echo "Running validation now."
+
+validate moz_test -r 2 -s 0.0025

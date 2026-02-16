@@ -19,8 +19,13 @@
         0.013,
         0.017
     ],
+<<<<<<< HEAD
     "birth_rate": 0.08,
     "calibration_year": 2023,
+=======
+    "birth_rate": 0.064,
+    "calibration_year": 2022,
+>>>>>>> e3a5426 (Refactor code for v4.2)
     "death_rate": [
         0.04814,
         0.041605,
@@ -57,9 +62,15 @@
         100
     ],
     "target_population": 36749906,
+<<<<<<< HEAD
     "starting_date": "2012/01/01",
     "ending_date": "2024/12/31",
     "start_of_comparison_period": "2023/01/01",
+=======
+    "starting_date": "2011/01/01",
+    "ending_date": "2023/12/31",
+    "start_of_comparison_period": "2022/01/01",
+>>>>>>> e3a5426 (Refactor code for v4.2)
     "target_case_count": 9098006,
     "lower_bound_case_count": 8500000,
     "upper_bound_case_count": 10500000,

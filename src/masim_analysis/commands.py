@@ -60,6 +60,7 @@ class Cluster(Enum):
 def generate_commands(
     input_configuration_file: Path | str,
     output_directory: Path | str,
+    log_directory: Path | str,
     repetitions: int = 1,
     use_pixel_reporter: bool = False,
 ) -> tuple[str, list[str]]:
@@ -108,13 +109,16 @@ def generate_commands(
     else:
         reporter = "SQLiteMonthlyReporter"
     for i in range(repetitions):
-        commands.append(f"./bin/MaSim -i {input_path} -o {output_file}_ -r {reporter} -j {i}\n")
+        input_name = input_path.name
+        commands.append(f"./bin/MaSim -i {input_path} -o {output_file}_ -r {reporter} -j {i} 2>&1 | tee {log_directory}/single_run_{input_name}_{i}.log\n")
+        # commands.append(f"./bin/MaSim -i {input_path} -o {output_file}_ -r {reporter} -j {i}\n")
     return commands_filename, commands
 
 
 def batch_generate_commands(
     input_configuration_directory: Path | str,
     output_directory: Path | str,
+    log_directory: Path | str,
     repetitions: int = 1,
 ) -> list[str]:
     """Discover YAML files under ``input_configuration_directory`` and
@@ -143,6 +147,7 @@ def batch_generate_commands(
         _, new_commands = generate_commands(
             yml_file,
             output_path,
+            log_directory,
             repetitions,
             # in_parallel=True,
             use_pixel_reporter=False,
@@ -160,6 +165,7 @@ def generate_job_file(
     std_output_location: Optional[Path | str] = Path("."),
     std_error_location: Optional[Path | str] = Path("."),
     email: Optional[str] = None,
+    job_log_directory: Optional[Path | str] = Path("."),
 ) -> None:
     """Write a PBS job script that executes commands from a file in parallel.
 
@@ -258,6 +264,7 @@ def setup_directories(country_code: str) -> None:
     - ``images/{country_code}``
     - ``log/{country_code}``
     - ``output/{country_code}`` (and subfolders ``calibration`` and ``validation``)
+    - ``jobs/{country_code}`` (optional, not currently used)
 
     Parameters
     ----------
@@ -271,6 +278,7 @@ def setup_directories(country_code: str) -> None:
     os.makedirs(f"./output/{country_code}", exist_ok=True)
     os.makedirs(f"./output/{country_code}/calibration", exist_ok=True)
     os.makedirs(f"./output/{country_code}/validation", exist_ok=True)
+    os.makedirs(f"./jobs/{country_code}", exist_ok=True)
     # os.makedirs(f"./scripts/{country_code}", exist_ok=True)
 
     # Check for required raster files in ./data/{country_code}
@@ -317,6 +325,7 @@ def main():
     batch_cmd.add_argument(
         "-o", "--output", type=str, help="Output directory for simulation results", default="./output"
     )
+    batch_cmd.add_argument("-l", "--job_log_directory", type=str, help="Directory for job log files", default=f"./jobs/{country_code}/logs")
     batch_cmd.add_argument("-r", "--repetitions", type=int, default=1)
     batch_cmd.add_argument("-n", "--name", type=str, default="batch_commands.txt", help="Name for the commands file")
 
@@ -337,6 +346,7 @@ def main():
     job_cmd.add_argument("-o", "--std_output_location", type=str, default="", help="Standard output location")
     job_cmd.add_argument("-e", "--std_error_location", type=str, default="", help="Standard error location")
     job_cmd.add_argument("-m", "--email", type=str, default=None, help="Email for job notifications")
+    job_cmd.add_argument("-l", "--job_log_directory", type=str, default=f"./jobs/{country_code}/logs", help="Directory for job log files")
 
     # ---- Additional commands for MaSimAnalysis processes and procedures defined in separate modules ----
     # === Full calibration ===
@@ -374,6 +384,7 @@ def main():
         filename, commands = generate_commands(
             args.configuration,
             args.output_directory,
+            args.job_log_directory,
             args.repetitions,
             args.reporter,
         )
@@ -387,6 +398,7 @@ def main():
         commands = batch_generate_commands(
             args.configuration,
             args.output_directory,
+            args.job_log_directory,
             args.repetitions,
         )
         with open(args.name, "w") as f:
@@ -404,6 +416,7 @@ def main():
             std_output_location=args.std_output_location,
             std_error_location=args.std_error_location,
             email=args.email,
+            job_log_directory=args.job_log_directory,
         )
     # elif args.command == "calibrate":
     #     calibrate(args.country_code, args.repetitions, args.output_dir)

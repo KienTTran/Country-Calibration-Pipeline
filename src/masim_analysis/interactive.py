@@ -60,7 +60,8 @@ def interactive_generate():
     repetitions = IntPrompt.ask("Number of repetitions", default=1)
     use_pixel = Confirm.ask("Use pixel reporter?", default=True)
 
-    filename, commands = generate_commands(config_file, output_dir, repetitions, use_pixel)
+    log_dir = Prompt.ask("Log directory", default="./jobs/logs")
+    filename, commands = generate_commands(config_file, output_dir, log_dir, repetitions, use_pixel)
 
     with open(filename, "w") as f:
         f.writelines(commands)
