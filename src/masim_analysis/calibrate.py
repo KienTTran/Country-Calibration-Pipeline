@@ -158,7 +158,7 @@ def write_pixel_data_files(raster_db: dict, population: int, access: float):
     ----------
     raster_db
         Mapping that must include the output paths for the population and
-        district raster files (keys used in callers).
+        administrative boundaries raster files (keys used in callers).
     population
         Population value (one of ``POPULATION_BINS``) used to populate the
         generated ASCII pixel file contents.
@@ -167,41 +167,23 @@ def write_pixel_data_files(raster_db: dict, population: int, access: float):
         file.write(
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{population}"
         )
-    with open(raster_db["district_raster"], "w") as file:
+    with open(raster_db["administrative_boundaries"][0]["raster"], "w") as file:
         file.write(f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n1")
 
     with open(raster_db["pr_treatment_under5"], "w") as file:
         file.write(
-<<<<<<< HEAD
-<<<<<<< HEAD
-            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
-        )
-    with open(raster_db["pr_treatment_over5"], "w") as file:
-        file.write(
-            f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n0.0"
-=======
-=======
->>>>>>> e3a5426 (Refactor code for v4.2)
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{access}"
         )
     with open(raster_db["pr_treatment_over5"], "w") as file:
         file.write(
             f"ncols 1\nnrows 1\nxllcorner 0\nyllcorner 0\ncellsize 5\nNODATA_value {configure.NODATA_VALUE}\n{access}"
-<<<<<<< HEAD
->>>>>>> 024dab2 (Update to use qsub to run more calibrations on clusters)
-=======
->>>>>>> e3a5426 (Refactor code for v4.2)
         )
 
 
 def generate_calibration_commands(
-<<<<<<< HEAD
-    country: CountryParams, access_rates: list[float], repetitions: int = 20, population_scalar: float = 1.0, output_directory: Path = Path("output"),
-=======
     country: CountryParams, access_rates: list[float], repetitions: int = 20, population_scalar: float = 1.0, 
     output_directory: Path = Path("output"),
     job_directory: Path = Path("jobs"),
->>>>>>> e3a5426 (Refactor code for v4.2)
 ) -> list[str]:
     """Generate shell command strings to run calibration simulations.
 
@@ -326,21 +308,6 @@ def check_missing_runs(
 
     missing_cmds = []
 
-<<<<<<< HEAD
-    Returns
-    -------
-    list[str]
-        List of commands (as strings) that the caller can pass to
-        ``utils.multiprocess`` to attempt reruns for missing outputs.
-    """
-    base_file_path = os.path.join(output_dir, country_code, "calibration")
-    missing_cmds: list[str] = []
-    
-    POPULATION_BINS = CountryParams.load(name=country_code).calibration_population_bins 
-    BETAS = CountryParams.load(name=country_code).calibration_betas
-    
-=======
->>>>>>> e3a5426 (Refactor code for v4.2)
     for pop in POPULATION_BINS:
         for access in access_rates:
             access_str = format_float(access)
@@ -349,32 +316,6 @@ def check_missing_runs(
                 beta_str = format_float(beta)
 
                 for i in range(repetitions):
-<<<<<<< HEAD
-                    filename = f"cal_{pop}_{access}_{beta}_monthly_data_{i + 1}"
-                    file = os.path.join(base_file_path, f"{filename}.db")
-                    try:
-                        # Attempt to read the monthly data and monthly site data
-                        # If the file exists, it will be read successfully
-                        _months = analysis.get_table(file, "monthly_data")
-                        _monthlysitedata = analysis.get_table(file, "monthly_site_data_district")
-                    except FileNotFoundError:
-                        # with open(f"missing_calibration_runs_{pop}.txt", "a") as f:
-                        #     # f.write(f"{e}\n")
-                        #     f.write(
-                        #         f"./bin/MaSim -i ./conf/{country_code}/calibration/cal_{pop}_{access}_{beta}.yml -o ./output/{country_code}/calibration/cal_{pop}_{access}_{beta}_ -r SQLiteMonthlyReporter -j {i + 1}\n"
-                        #     )
-                        # if not os.path.exists(f"missing_calibration_runs_{pop}_job.sh"):
-                        #     with open(f"missing_calibration_runs_{pop}_job.sh", "w") as f:
-                        #         f.write("#!/bin/sh\n")
-                        #         f.write("#PBS -l walltime=48:00:00\n")
-                        #         f.write(f"#PBS -N MissingCalibrationRuns_{pop}\n")
-                        #         f.write("#PBS -q normal\n")
-                        #         f.write("#PBS -l nodes=4:ppn=28\n")
-                        #         f.write("cd $PBS_O_WORKDIR\n")
-                        #         f.write(f"torque-launch missing_calibration_runs_{pop}.txt\n")
-                        missing_cmds.append(
-                            f"./bin/MaSim -i ./conf/{country_code}/calibration/cal_{pop}_{access}_{beta}.yml -o ./output/{country_code}/calibration/cal_{pop}_{access}_{beta}_ -r SQLiteMonthlyReporter -j {i + 1}"
-=======
 
                     filename = f"cal_{pop}_{access_str}_{beta_str}_monthly_data_{i}.db"
                     file = base_path / filename
@@ -387,7 +328,6 @@ def check_missing_runs(
                             f"-o ./output/{country_code}/calibration/cal_{pop}_{access_str}_{beta_str}_ "
                             f"-r SQLiteMonthlyReporter "
                             f"-j {i}"
->>>>>>> e3a5426 (Refactor code for v4.2)
                         )
 
                         missing_cmds.append(cmd)
@@ -930,11 +870,7 @@ def get_last_year_statistics(
     A tuple containing three DataFrames: mean_cases, mean_prevalence, mean_population
     """
     months = ave_cases["monthly_data_id"].unique()
-<<<<<<< HEAD
-    end_month = months[-13]
-=======
     end_month = months[-1] + 1
->>>>>>> e3a5426 (Refactor code for v4.2)
     start_month = end_month - 12
 
     mean_cases = (
@@ -1028,92 +964,6 @@ def run_calibration_simulations(
     output_dir = os.path.join("output", country.country_code, "calibration")
     os.makedirs(output_dir, exist_ok=True)
     
-<<<<<<< HEAD
-    # # write cmds to a file for record-keeping, save in script/country-name
-    # country_script_dir = os.path.join("scripts", country.country_code)
-    # os.makedirs(country_script_dir, exist_ok=True)
-    # country_cmds_path = os.path.join(country_script_dir, "cmds.txt")
-    # with open(country_cmds_path, "w") as f:
-    #     for cmd in cmds:
-    #         f.write(f"{cmd}\n")
-    # logger.info(f"Calibration commands written to: {country_cmds_path}")
-
-    # # Execute commands using multiprocessing
-    # if max_workers is None:
-    #     max_workers = utils.get_optimal_worker_count()
-
-    # logger.info(f"Starting calibration with {max_workers} worker processes...")
-
-    # successful, failed_commands = utils.multiprocess(cmds, max_workers, logger)
-    
-    logger.info("Running calibration simulations via PBS")
-
-    utils.submit_and_wait_pbs(
-        cmds=cmds,
-        country_code=country.country_code,
-        type="calibration",
-        logger=logger,
-    )
-
-    logger.info("\nRunning calibration completed")
-    
-    # check and return failed runs for 2 times, 
-    # then give up and exit if error still exists    
-    run_error_cmds = []
-    for attempt in range(2):    
-        run_error_cmds = utils.check_error_cmds(
-            os.path.join("jobs", country.country_code, type, "log"),
-            logger
-        )
-        if run_error_cmds:
-            logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
-            utils.submit_and_wait_pbs(
-                cmds=run_error_cmds,
-                country_code=country.country_code,
-                type=type,
-                logger=logger,
-            )
-        else:
-            break    
-      
-    # Final check for any remaining failed runs
-    run_error_cmds = utils.check_error_cmds(
-        os.path.join("jobs", country.country_code, type, "log"),
-        logger
-    )
-    
-    if run_error_cmds:
-        logger.error(f"There are still {len(run_error_cmds)} failed runs after retries. Please check the logs for details.")
-        exit()
-    else:
-        logger.info("All calibration runs completed successfully.")
-    
-    # if has_error:
-    # logger.info(f"  Successful runs: {successful}")
-    # logger.info(f"  Failed runs: {len(failed_commands)}")
-
-    # if failed_commands:
-    #     logger.info("Retrying failed commands.")
-    #     # Extract the command text
-    #     failed_commands = [cmd for (cmd, error) in failed_commands]
-    #     successful, failed_commands = utils.multiprocess(failed_commands, max_workers, logger)
-
-    # if failed_commands:
-    #     # Save failed commands to a file for debugging
-    #     failed_log_path = os.path.join("log", country.country_code, "calibration_failures.txt")
-    #     logger.info(f"There are {len(failed_commands)} failed commands. Writing these to a: {failed_log_path}")
-    #     os.makedirs(os.path.dirname(failed_log_path), exist_ok=True)
-
-    #     with open(failed_log_path, "w") as f:
-    #         f.write(f"Calibration failures for {country.country_code}\n")
-    #         f.write(f"Date: {date.today()}\n\n")
-    #         for cmd, error in failed_commands:
-    #             f.write(f"Command: {cmd}\n")
-    #             f.write(f"Error: {error}\n")
-    #             f.write("-" * 80 + "\n")
-
-    #     logger.info(f"Failed commands logged to: {failed_log_path}")
-=======
     job_dir = os.path.join("jobs", country.country_code, "calibration")
     os.makedirs(job_dir, exist_ok=True)
     
@@ -1167,7 +1017,6 @@ def run_calibration_simulations(
     except Exception as e:
         logger.exception(f"Post-calibration error checking crashed: {e}")
         raise
->>>>>>> e3a5426 (Refactor code for v4.2)
 
 
 def _summarize_calibration_results(
@@ -1261,10 +1110,6 @@ def summarize_calibration_results(country: CountryParams, data_path: Path | str 
     )
     count = 0
     for file in files:
-<<<<<<< HEAD
-        print(file)
-=======
->>>>>>> e3a5426 (Refactor code for v4.2)
         data = analysis.get_table(file, "monthly_site_data_district")
         end_month = data["monthly_data_id"].unique()[-13]
         file_name = file.stem
@@ -1321,11 +1166,7 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
 
     # Check for missing runs
     logger.info("Checking for missing calibration runs...")
-<<<<<<< HEAD
-    missing_cmds = check_missing_runs(country.country_code, access_rates, output_dir, repetitions)
-=======
     missing_cmds = check_missing_runs_exists_only_calibration(country.country_code, access_rates, output_dir, repetitions)
->>>>>>> e3a5426 (Refactor code for v4.2)
     if missing_cmds:
         logger.info(f"Found {len(missing_cmds)} missing runs. Re-running these simulations...")
         
@@ -1333,49 +1174,9 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
             cmds=missing_cmds,
             country_code=country.country_code,
             logger=logger,
-<<<<<<< HEAD
-        )
-
-        logger.info("\nRunning missing calibration completed")
-        
-        run_error_cmds = []
-        for attempt in range(2):    
-            run_error_cmds = utils.check_error_cmds(
-                os.path.join("jobs", country.country_code, "calibration", "log"),
-                logger
-            )
-            if run_error_cmds:
-                logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
-                utils.submit_and_wait_pbs(
-                    cmds=run_error_cmds,
-                    country_code=country.country_code,
-                    logger=logger,
-                )
-            else:
-                break    
-        
-        # Final check for any remaining failed runs
-        run_error_cmds = utils.check_error_cmds(
-            os.path.join("jobs", country.country_code, "calibration", "log"),
-            logger
-        )
-        
-        if run_error_cmds:
-            logger.error(f"There are still {len(run_error_cmds)} failed runs after retries. Please check the logs for details.")
-            exit()
-        else:
-            logger.info("All missing calibration runs completed successfully.")
-        
-        
-        # successful, failed_commands = utils.multiprocess(missing_cmds, utils.get_optimal_worker_count(), logger)
-        # logger.info(f"Re-run completed: {successful} successful, {len(failed_commands)} failed.")
-        # if failed_commands:
-        #     logger.warning("Some commands still failed after re-run. Check logs for details.")
-=======
             run_type="calibration",
             rotate_logs=True,
         )
->>>>>>> e3a5426 (Refactor code for v4.2)
 
         logger.info("\nRunning missing calibration completed")
         

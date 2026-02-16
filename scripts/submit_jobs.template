@@ -2,11 +2,8 @@
 #PBS -N submit_#JOB_NAME#
 #PBS -l select=1:ncpus=1
 #PBS -q max
-<<<<<<< HEAD
-=======
 #PBS -e submit_jobs.error
 #PBS -o submit_jobs.output
->>>>>>> e3a5426 (Refactor code for v4.2)
 
 cd "$PBS_O_WORKDIR"
 

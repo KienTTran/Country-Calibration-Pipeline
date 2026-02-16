@@ -125,11 +125,7 @@ def _prevelance_comparison(
     """
     ave_cases = ave_cases.drop(columns="clinical_episodes")
     months = ave_cases["monthly_data_id"].unique()
-<<<<<<< HEAD
-    ending_month = months[-13]
-=======
     ending_month = months[-1] + 1
->>>>>>> e3a5426 (Refactor code for v4.2)
     ave_cases_year = (
         ave_cases[ave_cases["monthly_data_id"].between(ending_month - 12, ending_month, inclusive="left")]
         .groupby("unit_id")
@@ -225,9 +221,6 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
     logger.info("Validation post-processing completed.")
 
 
-<<<<<<< HEAD
-def validate(country_code: str, repetitions: int = 50, output_dir: Path | str = Path("output"), scaling: float = 0.25):
-=======
 from pathlib import Path
 import os
 
@@ -278,7 +271,6 @@ def validate(country_code: str, repetitions: int = 50,
              output_dir: Path | str = Path("output"), 
              job_dir: Path | str = Path("jobs"),
              scaling: float = 0.25):
->>>>>>> e3a5426 (Refactor code for v4.2)
     """
     run the validation pipeline for a MaSim model for a given country.
 
@@ -346,70 +338,6 @@ def validate(country_code: str, repetitions: int = 50,
     with open(Path("conf") / country_code.lower() / "test" / "validation_config.yaml", "w") as f:
         yaml.dump(params, f)
     logger.info("Validation configuration file created.")
-<<<<<<< HEAD
-    _, cmds = commands.generate_commands(
-        Path("conf") / country_code.lower() / "test" / "validation_config.yaml",
-        Path(output_dir) / country_code.lower() / "validation",
-        repetitions,
-        False,
-    )
-    logger.info(f"Generated {len(cmds)} validation commands to execute.")
-    # Create output directory if it doesn't exist
-    output_dir = os.path.join("output", country.country_code, "validation")
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Execute commands using multiprocessing
-    logger.info("Starting validation runs...")
-    
-    logger.info("Running validation simulations via PBS")
-
-    utils.submit_and_wait_pbs(
-        cmds=cmds,
-        country_code=country.country_code,
-        type="validation",
-        logger=logger,
-    )
-
-    logger.info("\nRunning validation completed")
-    
-    # check and return failed runs for 2 times, 
-    # then give up and exit if error still exists    
-    run_error_cmds = []
-    for attempt in range(2):    
-        run_error_cmds = utils.check_error_cmds(
-            os.path.join("jobs", country.country_code, type, "log"),
-            logger
-        )
-        if run_error_cmds:
-            logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
-            utils.submit_and_wait_pbs(
-                cmds=run_error_cmds,
-                country_code=country.country_code,
-                type=type,
-                logger=logger,
-            )
-        else:
-            break    
-      
-    # Final check for any remaining failed runs
-    run_error_cmds = utils.check_error_cmds(
-        os.path.join("jobs", country.country_code, type, "log"),
-        logger
-    )
-    
-    if run_error_cmds:
-        logger.error(f"There are still {len(run_error_cmds)} failed runs after retries. Please check the logs for details.")
-        exit()
-    else:
-        logger.info("All validation runs completed successfully.")
-        
-    # max_workers = utils.get_optimal_worker_count()
-    # successful, failed = utils.multiprocess(cmds, max_workers, logger)
-    # logger.info(f"Validation runs completed: {successful} successful, {failed} failed.")
-    
-    # Post-processing
-    post_process(country, params, logger)
-=======
     try:
         logger.info(f"DEBUG types: output_dir={output_dir!r} ({type(output_dir)}), job_dir={job_dir!r} ({type(job_dir)}), scaling={scaling!r} ({type(scaling)})")
         _, cmds = commands.generate_commands(
@@ -496,7 +424,6 @@ def validate(country_code: str, repetitions: int = 50,
     except Exception as e:
         logger.error(f"An error occurred during validation: {e}")
         raise
->>>>>>> e3a5426 (Refactor code for v4.2)
 
 
 def main():
@@ -524,17 +451,12 @@ def main():
         help="Artificial rescaling of population size (default: 0.25).",
     )
     args = parser.parse_args()
-<<<<<<< HEAD
-    validate(args.country_code, args.repetitions, args.output_dir, args.scaling)
-
-=======
     validate(
         args.country_code,
         repetitions=args.repetitions,
         output_dir=args.output_dir,
         scaling=args.scaling,
     )
->>>>>>> e3a5426 (Refactor code for v4.2)
 
 if __name__ == "__main__":
     main()

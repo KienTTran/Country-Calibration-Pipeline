@@ -4,9 +4,9 @@ connection_string: host=masimdb.vmhost.psu.edu dbname=rwanda user=sim
   password=sim connect_timeout=60
 record_genome_db: true
 report_frequency: 30
-starting_date: 2012/01/01
-start_of_comparison_period: 2023/01/01
-ending_date: 2024/12/31
+starting_date: 2011/01/01
+start_of_comparison_period: 2022/01/01
+ending_date: 2023/12/31
 start_collect_data_day: 1826
 number_of_tracking_days: 11
 transmission_parameter: 0.55
@@ -44,11 +44,7 @@ initial_age_structure:
 - 69
 - 100
 artificial_rescaling_of_population_size: 1.0
-<<<<<<< HEAD
-birth_rate: 0.08
-=======
 birth_rate: 0.064
->>>>>>> e3a5426 (Refactor code for v4.2)
 death_rate_by_age_class:
 - 0.04814
 - 0.041605
@@ -703,12 +699,7 @@ strategy_db:
     - 8
     - 6
     - 4
-<<<<<<< HEAD
-    - 0
-    - 0
-=======
     - 5
->>>>>>> e3a5426 (Refactor code for v4.2)
     - 0
     distribution:
     - 0.08762886597938145
@@ -764,40 +755,24 @@ strategy_db:
 events:
 - name: turn_off_mutation
   info:
-<<<<<<< HEAD
-  - day: 2012/01/01
-- name: 2003_strategy
-  info:
-  - day: 2003/01/01
-    strategy_id: 0
-=======
   - day: 2011/01/01
->>>>>>> e3a5426 (Refactor code for v4.2)
 - name: 2011_strategy
   info:
   - day: 2011/01/01
-    strategy_id: 1
+    strategy_id: 0
 - name: 2015_strategy
   info:
   - day: 2015/01/01
-    strategy_id: 2
+    strategy_id: 1
 - name: 2018_strategy
   info:
   - day: 2018/01/01
-<<<<<<< HEAD
-    strategy_id: 3
-=======
     strategy_id: 2
->>>>>>> e3a5426 (Refactor code for v4.2)
 - name: 2022_strategy
   info:
   - day: 2022/01/01
-    strategy_id: 4
+    strategy_id: 3
 - name: 2023_strategy
   info:
   - day: 2023/01/01
-<<<<<<< HEAD
-    strategy_id: 5
-=======
     strategy_id: 4
->>>>>>> e3a5426 (Refactor code for v4.2)
