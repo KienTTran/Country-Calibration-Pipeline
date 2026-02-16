@@ -882,15 +882,7 @@ def create_seasonal_model_rainfall(enable: bool, country_code: str, period: int 
             "period": period,
         },
     }
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
->>>>>>> 024dab2 (Update to use qsub to run more calibrations on clusters)
-
-=======
-
->>>>>>> e3a5426 (Refactor code for v4.2)
 
 def create_seasonal_model_pattern(enable: bool, country_code: str, period: int = 365, is_single_location: bool = False) -> dict:
     """Create a seasonality configuration block for MaSim.
@@ -1026,28 +1018,18 @@ def create_raster_db(
     except FileExistsError:
         pass
 
-    administrative_boundaries = {
-        "name": "district",
-        "raster": os.path.join(data_root, f"{name}{calibration_string}_districts.asc"),
-    }
+    administrative_boundaries =  {
+            "name": "district",
+            "raster": os.path.join(data_root, f"{name}{calibration_string}_districts.asc"),
+     }    
 
     raster_db = {
         "population_raster": os.path.join(data_root, f"{name}{calibration_string}_initialpopulation.asc"),
         # "district_raster": os.path.join(data_root, f"{name}{calibration_string}_districts.asc"),asdasd
-        "administrative_boundaries": [administrative_boundaries],
+        "administrative_boundaries" : [administrative_boundaries],
         "cell_size": 5,
-<<<<<<< HEAD
-<<<<<<< HEAD
-        "pr_treatment_under5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
-        "pr_treatment_over5": os.path.join(data_root, f"{name}_treatmentseeking.asc"),
-=======
         "pr_treatment_under5": os.path.join(data_root, f"{name}_treatmentseeking_{access_rate}.asc") if access_rate >= 0.0 else os.path.join(data_root, f"{name}_treatmentseeking.asc")  ,
         "pr_treatment_over5": os.path.join(data_root, f"{name}_treatmentseeking_{access_rate}.asc") if access_rate >= 0.0 else os.path.join(data_root, f"{name}_treatmentseeking.asc"),
->>>>>>> 024dab2 (Update to use qsub to run more calibrations on clusters)
-=======
-        "pr_treatment_under5": os.path.join(data_root, f"{name}_treatmentseeking_{access_rate}.asc") if access_rate >= 0.0 else os.path.join(data_root, f"{name}_treatmentseeking.asc")  ,
-        "pr_treatment_over5": os.path.join(data_root, f"{name}_treatmentseeking_{access_rate}.asc") if access_rate >= 0.0 else os.path.join(data_root, f"{name}_treatmentseeking.asc"),
->>>>>>> e3a5426 (Refactor code for v4.2)
         "age_distribution_by_location": [age_distribution],
         "p_treatment_for_less_than_5_by_location": [access_rate],
         "p_treatment_for_more_than_5_by_location": [access_rate],

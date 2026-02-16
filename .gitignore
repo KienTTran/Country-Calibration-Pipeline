@@ -32,3 +32,11 @@ jobs/*/*/log*
 log/
 output/
 images/
+
+*/.DS_Store
+*/*/.DS_Store
+*/*/*/.DS_Store
+*/*/*/*/.DS_Store
+
+src/masim_analysis/__pycache__
+src/masim_analysis/.ipynb_checkpoints
