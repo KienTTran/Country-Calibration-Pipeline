@@ -25,6 +25,7 @@ bin/MaSim
 
 conf/*/calibration
 data/*/calibration
+data/*/analysis
 
 jobs/*/*/log_*
 jobs/*/*/log*
@@ -32,6 +33,7 @@ jobs/*/*/log*
 log/
 output/
 images/
+
 
 */.DS_Store
 */*/.DS_Store

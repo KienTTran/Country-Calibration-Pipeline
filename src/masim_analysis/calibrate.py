@@ -849,6 +849,7 @@ def predicted_prevalence(
 
 def get_last_year_statistics(
     ave_cases: DataFrame,
+    ave_treatment: DataFrame,
     ave_prevalence_2_to_10: DataFrame,
     ave_prevalence_under_5: DataFrame,
     ave_population: DataFrame,
@@ -860,8 +861,12 @@ def get_last_year_statistics(
     ----------
         ave_cases : DataFrame
             The data frame containing average cases data
-        ave_prevalence : DataFrame
-            The data frame containing average prevalence data
+        ave_treatment : DataFrame
+            The data frame containing average treatment data
+        ave_prevalence_2_to_10 : DataFrame
+            The data frame containing average prevalence data for ages 2 to 10
+        ave_prevalence_under_5 : DataFrame
+            The data frame containing average prevalence data for ages under 5
         ave_population : DataFrame
             The data frame containing average population data
 
@@ -872,6 +877,16 @@ def get_last_year_statistics(
     months = ave_cases["monthly_data_id"].unique()
     end_month = months[-1] + 1
     start_month = end_month - 12
+    
+    mean_treatment = (
+        ave_treatment.loc[ave_treatment["monthly_data_id"].between(start_month, end_month, inclusive="left")]
+        .copy()
+        .groupby("unit_id")
+        .sum()
+    )
+    mean_treatment = mean_treatment.drop(columns=["monthly_data_id"])
+    # mean_treatment = mean_treatment.drop(columns=["clinical_episodes"])
+    mean_treatment["mean"] = mean_treatment.mean(axis=1)
 
     mean_cases = (
         ave_cases.loc[ave_cases["monthly_data_id"].between(start_month, end_month, inclusive="left")]
@@ -880,7 +895,7 @@ def get_last_year_statistics(
         .sum()
     )
     mean_cases = mean_cases.drop(columns=["monthly_data_id"])
-    mean_cases = mean_cases.drop(columns=["clinical_episodes"])
+    # mean_cases = mean_cases.drop(columns=["clinical_episodes"])
     mean_cases["mean"] = mean_cases.mean(axis=1)
     mean_cases["std"] = mean_cases.std(axis=1)
 
@@ -891,7 +906,7 @@ def get_last_year_statistics(
         .mean()
     )
     mean_population = mean_population.drop(columns=["monthly_data_id"])
-    mean_population = mean_population.drop(columns=["population"])
+    # mean_population = mean_population.drop(columns=["population"])
     mean_population["mean"] = mean_population.mean(axis=1)
     mean_population["std"] = mean_population.std(axis=1)
 
@@ -904,7 +919,7 @@ def get_last_year_statistics(
         .mean()
     )
     mean_prevalence_2_to_10 = mean_prevalence_2_to_10.drop(columns=["monthly_data_id"])
-    mean_prevalence_2_to_10 = mean_prevalence_2_to_10.drop(columns=["pfpr_2to10"])
+    # mean_prevalence_2_to_10 = mean_prevalence_2_to_10.drop(columns=["pfpr_2to10"])
     mean_prevalence_2_to_10["mean"] = mean_prevalence_2_to_10.mean(axis=1)
     mean_prevalence_2_to_10["std"] = mean_prevalence_2_to_10.std(axis=1)
 
@@ -917,11 +932,11 @@ def get_last_year_statistics(
         .mean()
     )
     mean_prevalence_under_5 = mean_prevalence_under_5.drop(columns=["monthly_data_id"])
-    mean_prevalence_under_5 = mean_prevalence_under_5.drop(columns=["pfpr_under5"])
+    # mean_prevalence_under_5 = mean_prevalence_under_5.drop(columns=["pfpr_under5"])
     mean_prevalence_under_5["mean"] = mean_prevalence_under_5.mean(axis=1)
     mean_prevalence_under_5["std"] = mean_prevalence_under_5.std(axis=1)
 
-    return mean_cases, mean_prevalence_2_to_10, mean_prevalence_under_5, mean_population
+    return mean_cases, mean_treatment, mean_prevalence_2_to_10, mean_prevalence_under_5, mean_population
 
 
 # ==== Main functionality ====

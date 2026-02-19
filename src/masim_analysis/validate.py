@@ -62,25 +62,30 @@ def _averaging_pass(
     
     base_dir = Path(output_dir) / country.country_code / "validation"
     base_dir.mkdir(parents=True, exist_ok=True)
-
+    
+    analysis_dir = Path("data") / country.country_code / "analysis"
+    analysis_dir.mkdir(parents=True, exist_ok=True)
 
     (
         ave_population,
+        ave_treatment,
         ave_cases,
         ave_prevalence_2_to_10,
         ave_cases_2_to_10,
         ave_prevalence_under_5,
         ave_cases_under_5,
     ) = analysis.get_average_summary_statistics(base_dir)
-    ave_population.to_csv(base_dir / "ave_population.csv")
-    ave_cases.to_csv(base_dir / "ave_cases.csv")
-    ave_prevalence_2_to_10.to_csv(base_dir / "ave_prevalence_2_to_10.csv")
-    ave_cases_2_to_10.to_csv(base_dir / "ave_cases_2_to_10.csv")
-    ave_prevalence_under_5.to_csv(base_dir / "ave_prevalence_under_5.csv")
-    ave_cases_under_5.to_csv(base_dir / "ave_cases_under_5.csv")
+    ave_population.to_csv(analysis_dir / "ave_population.csv")
+    ave_treatment.to_csv(analysis_dir / "ave_treatment.csv")
+    ave_cases.to_csv(analysis_dir / "ave_cases.csv")
+    ave_prevalence_2_to_10.to_csv(analysis_dir / "ave_prevalence_2_to_10.csv")
+    ave_cases_2_to_10.to_csv(analysis_dir / "ave_cases_2_to_10.csv")
+    ave_prevalence_under_5.to_csv(analysis_dir / "ave_prevalence_under_5.csv")
+    ave_cases_under_5.to_csv(analysis_dir / "ave_cases_under_5.csv")
 
     return (
         ave_population,
+        ave_treatment,
         ave_cases,
         ave_prevalence_2_to_10,
         ave_cases_2_to_10,
@@ -123,29 +128,17 @@ def _prevelance_comparison(
         A merged DataFrame containing observed prevalence ('obs'), predicted
         prevalence ('mean_2_to_10', 'mean_under_5') and population columns.
     """
-    ave_cases = ave_cases.drop(columns="clinical_episodes")
-    months = ave_cases["monthly_data_id"].unique()
-    ending_month = months[-1] + 1
-    ave_cases_year = (
-        ave_cases[ave_cases["monthly_data_id"].between(ending_month - 12, ending_month, inclusive="left")]
-        .groupby("unit_id")
-        .sum()
-        .drop(columns="monthly_data_id")
-    )
-    ave_cases_year["mean"] = ave_cases_year.mean(axis=1)
-
     # population, _ = utils.read_raster(Path("data") / country.country_code / f"{country.country_code}_population.asc")
     prevalence_obs, _ = utils.read_raster(Path("data") / country.country_code / f"{country.country_code}_pfpr2to10.asc")
-    prevalence_obs = prevalence_obs.reshape(-1)
+    # prevalence_obs = prevalence_obs.reshape(-1)
+    district_raster, _ = utils.read_raster(Path("data") / country.country_code / f"{country.country_code}_districts.asc")
     prevalence_comp = mean_prevalence_2_to_10[["mean"]].copy().div(100).rename(columns={"mean": "mean_2_to_10"})
     prevalence_comp["mean_under_5"] = (
         mean_prevalence_under_5[["mean"]].copy().div(100).rename(columns={"mean": "mean_under_5"})
     )
-    prev_obs = DataFrame(
-        {"obs": prevalence_obs[~np.isnan(prevalence_obs)]},
-        index=np.arange(len(prevalence_obs[~np.isnan(prevalence_obs)])),
-    )
-    prevalence = prevalence_comp.merge(prev_obs, left_index=True, right_index=True, how="outer")
+    prevalence_district = DataFrame({"district": district_raster.flatten(), "obs": prevalence_obs.flatten()})
+    prevalence_district = prevalence_district.groupby("district")["obs"].mean().rename("obs").to_frame()
+    prevalence = prevalence_comp.merge(prevalence_district, left_index=True, right_index=True, how="outer")
     prevalence = prevalence.merge(mean_population["mean"].rename("population"), left_index=True, right_index=True, how="outer")
     
     return prevalence
@@ -173,6 +166,8 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
         
     base_dir = Path(output_dir) / country.country_code / "validation"
     base_dir.mkdir(parents=True, exist_ok=True)
+    analysis_dir = Path("data") / country.country_code / "analysis"
+    analysis_dir.mkdir(parents=True, exist_ok=True)
 
     # images is parallel to output_dir, not inside it
     image_base = Path(output_dir).parent / "images"
@@ -182,6 +177,7 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
     # Validation post-processing averaging pass
     (
         ave_population,
+        ave_treatment,
         ave_cases,
         ave_prevalence_2_to_10,
         ave_cases_2_to_10,
@@ -190,8 +186,18 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
     ) = _averaging_pass(country, output_dir=output_dir)
 
     # Total case count verification
-    mean_cases, mean_prevalence_2_to_10, mean_prevalence_under_5, mean_population = get_last_year_statistics(
-        ave_cases, ave_prevalence_2_to_10, ave_prevalence_under_5, ave_population
+    mean_cases, mean_treatment, mean_prevalence_2_to_10, mean_prevalence_under_5, mean_population = get_last_year_statistics(
+        ave_cases, ave_treatment, ave_prevalence_2_to_10, ave_prevalence_under_5, ave_population
+    )
+    mean_cases.to_csv(analysis_dir / "mean_cases.csv")
+    mean_treatment.to_csv(analysis_dir / "mean_treatment.csv")
+    mean_prevalence_2_to_10.to_csv(analysis_dir / "mean_prevalence_2_to_10.csv")
+    mean_prevalence_under_5.to_csv(analysis_dir / "mean_prevalence_under_5.csv")
+    mean_population.to_csv(analysis_dir / "mean_population.csv")
+    
+    logger.info("Last-year summary statistics saved.")
+    logger.info(
+        f"Last-year mean treatment: {mean_treatment['mean'].sum(): ,.0f} | SCALED: {mean_treatment['mean'].sum() / params['artificial_rescaling_of_population_size']: ,.0f}"
     )
     logger.info(
         f"{mean_cases['mean'].sum(): ,.0f} clinical episodes | SCALED: {mean_cases['mean'].sum() / params['artificial_rescaling_of_population_size']: ,.0f}"
@@ -203,13 +209,12 @@ def post_process(country: CountryParams, params: dict, logger: logging.Logger | 
     prevalence = _prevelance_comparison(
         country, ave_cases, mean_prevalence_2_to_10, mean_prevalence_under_5, mean_population
     )
-    prevalence["population"] = mean_population["mean"]  # FIXED BUG HERE
-    prevalence.to_csv(base_dir / "prevalence_comparison.csv")
+    prevalence.to_csv(analysis_dir / "prevalence_comparison.csv")
     logger.info("Prevalence comparison data saved.")
     prevalence_fit = analysis.plot_prevalence_trend(
         prevalence["obs"].to_numpy(),
         prevalence["mean_2_to_10"].to_numpy(),
-        prevalence["population"].to_numpy(),  # BUG HERE
+        prevalence["population"].to_numpy(),
         "2 to 10",
     )
     prevalence_fit.savefig(

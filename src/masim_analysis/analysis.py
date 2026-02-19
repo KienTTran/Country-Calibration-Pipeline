@@ -27,7 +27,6 @@ from numpy.typing import NDArray
 import pandas as pd
 from matplotlib.figure import Figure
 
-
 table_names = [
     "monthly_data",
     "sqlite_sequence",
@@ -649,10 +648,11 @@ def get_average_summary_statistics(
         raise FileNotFoundError(f"No .db files found in directory {path}.")
 
     ave_population = pd.DataFrame(columns=["monthly_data_id", "unit_id", "population"])
+    ave_treatment = pd.DataFrame(columns=["monthly_data_id", "unit_id", "treatments"])
     ave_cases = pd.DataFrame(columns=["monthly_data_id", "unit_id", "clinical_episodes"])
     ave_prevalence_2_to_10 = pd.DataFrame(columns=["monthly_data_id", "unit_id", "pfpr_2to10"])
     ave_cases_2_to_10 = pd.DataFrame(columns=["monthly_data_id", "unit_id", "cases2to10"])
-    ave_prevalence_under_5 = pd.DataFrame(columns=["monthly_data_id", "unit_id", "pfp_runder5"])
+    ave_prevalence_under_5 = pd.DataFrame(columns=["monthly_data_id", "unit_id", "pfpr_under5"])
     ave_cases_under_5 = pd.DataFrame(columns=["monthly_data_id", "unit_id", "casesunder5"])
 
     rep = 0
@@ -712,6 +712,12 @@ def get_average_summary_statistics(
                 on=["monthly_data_id", "unit_id"],
                 suffixes=("", f"_{rep}"),
             )
+            ave_treatment = ave_treatment.merge(
+                data[["monthly_data_id", "unit_id", "treatments"]].copy(),
+                how="outer",
+                on=["monthly_data_id", "unit_id"],
+                suffixes=("", f"_{rep}"),
+            )
             ave_cases = ave_cases.merge(
                 data[["monthly_data_id", "unit_id", "clinical_episodes"]].copy(),
                 how="outer",
@@ -745,8 +751,18 @@ def get_average_summary_statistics(
         except Exception as e:
             print(f"Error processing replication {rep}: {e}")
         rep += 1
+        
+    ave_population = ave_population.drop(columns=["population"])
+    ave_treatment = ave_treatment.drop(columns=["treatments"])
+    ave_cases = ave_cases.drop(columns=["clinical_episodes"])
+    ave_prevalence_2_to_10 = ave_prevalence_2_to_10.drop(columns=["pfpr_2to10"])
+    ave_cases_2_to_10 = ave_cases_2_to_10.drop(columns=["clinical_episodes_2_to_10"])
+    ave_prevalence_under_5 = ave_prevalence_under_5.drop(columns=["pfpr_under5"])
+    ave_cases_under_5 = ave_cases_under_5.drop(columns=["clinical_episodes_under5"])
+    
     return (
         ave_population,
+        ave_treatment,
         ave_cases,
         ave_prevalence_2_to_10,
         ave_cases_2_to_10,
@@ -781,18 +797,56 @@ def plot_prevalence_trend(
     matplotlib.figure.Figure
         Scatter plot Figure comparing observed and simulated prevalence.
     """
-    fig, ax = plt.subplots(figsize=(12, 12))
+    # fig, ax = plt.subplots(figsize=(8, 8))
+    # sns.scatterplot(
+    #     x=observed,
+    #     y=simulated,
+    #     size=populations,
+    #     sizes=(10.0, 300.0),
+    #     alpha=0.35,
+    #     palette="viridis",
+    #     ax=ax,
+    #     legend="brief",
+    # )
+
+    # x = np.linspace(0.0, upper_limit, 1000)
+    # ax.plot(x, x, color="red", linestyle="--", linewidth=2)
+
+    # ax.set_xlim(0.0, upper_limit)
+    # ax.set_ylim(0.0, upper_limit)
+    # ax.set_xlabel("Observed PfPR")
+    # ax.set_ylabel("Predicted PfPR")
+
+    # title = "Observed vs Predicted PfPR"
+    # if age_str is not None:
+    #     title += f" ({age_str.replace('_', ' ')})"
+    # ax.set_title(title)
+
+    # # ticks: choose a sensible step based on range
+    # step = 0.1 if upper_limit <= 1.0 else max(0.1, upper_limit / 10.0)
+    # ax.set_xticks(np.round(np.arange(0.0, upper_limit + 1e-9, step), 2))
+    # ax.set_yticks(np.round(np.arange(0.0, upper_limit + 1e-9, step), 2))
+
+    # ax.legend()
+    # plt.tight_layout()
+    # return fig
+
+    fig, ax = plt.subplots(figsize=(8, 8))
     if populations is None:
         populations = np.ones(len(observed))
+    
+    # Normalize populations to scale marker sizes appropriately
+    sizes = (populations / np.nanmax(populations)) * population_plot_scalar
+    
     ax.scatter(
         observed,
         simulated,
-        s=populations / np.nanmax(populations) * population_plot_scalar,
+        s=sizes,
         marker="o",
-        alpha=0.35,
-        cmap="viridis",
+        alpha=0.9,
         c=populations,
-        label="Predicted PfPR",
+        cmap="viridis",
+        label="Population Size",
     )
     cbar = ax.figure.colorbar(ax.collections[0])
     cbar.set_label("Population", rotation=270, labelpad=15)
@@ -807,5 +861,33 @@ def plot_prevalence_trend(
     else:
         ax.set_title(f"Observed vs Predicted PfPR ({age_str.replace('_', ' ')})")
     ax.set_xticks(np.arange(0.0, upper_limit, 0.1))
-    ax.legend()
+    # Create legend entries that show a wide dynamic range of populations
+    from matplotlib.lines import Line2D
+    cmap = plt.get_cmap("viridis")
+    norm = plt.Normalize(vmin=populations.min(), vmax=populations.max())
+    # choose representative population values (include zero if present, plus several quantiles)
+    pos = populations[populations > 0]
+    if len(pos) == 0:
+        rep_pops = [int(populations.min())]
+    else:
+        quantiles = np.unique(np.round(np.quantile(pos, [0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99])))
+        rep_pops = []
+        if populations.min() == 0:
+            rep_pops.append(0)
+        for q in quantiles:
+            if int(q) not in rep_pops:
+                rep_pops.append(int(q))
+        if int(pos.max()) not in rep_pops:
+            rep_pops.append(int(pos.max()))
+    # build legend handles with matching color and size
+    handles = []
+    max_pop = np.nanmax(populations) if np.nanmax(populations) > 0 else 1
+    for pv in rep_pops:
+        s = (pv / max_pop) * population_plot_scalar
+        ms = max(np.sqrt(s), 4)  # ensure visible marker size in legend
+        color = cmap(norm(pv))
+        handles.append(
+            Line2D([0], [0], marker="o", color="w", markerfacecolor=color, markersize=ms, alpha=0.9, label=f"{pv:,}")
+        )
+    ax.legend(handles=handles, title="Population", loc="upper left")
     return fig

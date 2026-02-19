@@ -156,35 +156,47 @@ def write_raster(
     raster: numpy.ndarray, file: Path | str, xllcorner: float, yllcorner: float, cellsize: int = 5000
 ) -> None:
     """
-    Write a raster array to a file.
-
-    Parameters
-    ----------
-    raster : numpy.typing.NDArray
-        The raster array to write.
-    file : str
-        The path to the output file.
-    xllcorner : float
-        The x-coordinate of the lower left corner of the raster.
-    yllcorner : float
-        The y-coordinate of the lower left corner of the raster.
-    cellsize : int, optional
-        The size of each cell in the raster, by default 5000.
+    Write a raster array to a file with:
+    - float values formatted to 5 decimals
+    - NODATA written as integer
     """
+
     file_path = Path(file)
+
     if not file_path.parent.exists():
         raise FileNotFoundError(f"Directory does not exist: {file_path.parent}")
+
     nrows, ncols = raster.shape
-    raster = numpy.where(numpy.isnan(raster), configure.NODATA_VALUE, raster)
-    with open(file, "w") as f:
+
+    nodata = int(configure.NODATA_VALUE)
+
+    # Replace NaN with nodata for writing
+    raster_out = numpy.where(numpy.isnan(raster), nodata, raster)
+
+    with open(file_path, "w") as f:
+
+        # header
         f.write(f"ncols\t{ncols}\n")
         f.write(f"nrows\t{nrows}\n")
         f.write(f"xllcorner\t{xllcorner}\n")
         f.write(f"yllcorner\t{yllcorner}\n")
         f.write(f"cellsize\t{cellsize}\n")
-        f.write(f"NODATA_value\t{configure.NODATA_VALUE}\n")
-        for row in raster:
-            f.write(" ".join([str(value) for value in row]) + "\n")
+        f.write(f"NODATA_value\t{nodata}\n")
+
+        # write data
+        for row in raster_out:
+
+            line = []
+
+            for value in row:
+
+                if numpy.isclose(value, nodata):
+                    line.append(str(nodata))
+                else:
+                    line.append(f"{float(value):.5f}")
+
+            f.write(" ".join(line) + "\n")
+
 
 
 # ==== Logger setup ====
