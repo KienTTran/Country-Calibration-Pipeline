@@ -23,17 +23,17 @@ venv/
 
 bin/MaSim
 
-conf/*/calibration
 data/*/calibration
 data/*/analysis
 
-jobs/*/*/log_*
-jobs/*/*/log*
-
+conf/
+jobs/
 log/
 output/
 images/
 
+*.error
+*.output
 
 */.DS_Store
 */*/.DS_Store
