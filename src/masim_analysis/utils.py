@@ -19,6 +19,10 @@ from pathlib import Path
 from masim_analysis import configure
 import random
 import string
+    
+import re
+import logging
+
 
 
 def plot_districts(
@@ -458,11 +462,10 @@ def submit_and_wait_pbs(cmds, country_code, logger, run_type, host_name,
     submit_out = os.path.join(base_dir, "submit.output")
     submit_err = os.path.join(base_dir, "submit.error")
 
-    subprocess.run(
-        ["qsub", "-v", env, "-o", submit_out, "-e", submit_err, "submit_jobs.pbs"],
-        cwd=script_dir,
-        check=True,
-    )
+    logger.info("Use command below to manually run the PBS job if needed:")
+    cmd = ["qsub", "-v", env, "-o", submit_out, "-e", submit_err, "submit_jobs.pbs"]
+    logger.info(" ".join(cmd))
+    subprocess.run(cmd, cwd=script_dir, check=True)
 
     logger.info(f"Waiting for all PBS jobs named '{jobname_target}' to finish...")
     time.sleep(5)  # allow jobs to appear
@@ -520,8 +523,8 @@ def check_error_cmds(log_dir: str, cmds_path: str, logger) -> list[str]:
         if os.path.getsize(full) <= 0:
             continue
 
-        # Case A: base__123.error -> exact index
-        m = re.search(r"__(\d+)\.error$", fn)
+        # Case A: base_123.error -> exact index
+        m = re.search(r"_(\d+)\.error$", fn)
         if m:
             idx = int(m.group(1))
             if 0 <= idx < len(cmd_lines) and idx not in seen_idx:
@@ -543,5 +546,152 @@ def check_error_cmds(log_dir: str, cmds_path: str, logger) -> list[str]:
 
     return rerun_cmds
 
+def retry_failed_runs(
+    *,
+    log_dir: str,
+    cmds_path: str,
+    country_code: str,
+    run_type: str,
+    host_name: str,
+    logger,
+    max_retries: int = 2,
+) -> None:
+    """Check for errored PBS commands and retry up to *max_retries* times.
 
+    Scans ``log_dir`` for non-empty ``.error`` files, maps them back to
+    commands via ``cmds_path``, and resubmits.  Exits with code 1 if
+    failures persist after all retries.
 
+    Parameters
+    ----------
+    log_dir : str
+        Directory containing ``*.error`` files from PBS.
+    cmds_path : str
+        Path to ``cmds.txt`` mapping indices to command strings.
+    country_code, run_type, host_name
+        Forwarded to ``submit_and_wait_pbs``.
+    logger
+        Logger instance.
+    max_retries : int
+        Retry rounds to attempt (default 2).
+    """
+    max_jobs = 400 if run_type == "calibration" else 50  # Adjust based on expected load
+    for attempt in range(1, max_retries + 1):
+        error_cmds = check_error_cmds(
+            log_dir=log_dir,
+            cmds_path=cmds_path,
+            logger=logger,
+        )
+        if not error_cmds:
+            logger.info(f"No failed {run_type} runs detected.")
+            return
+
+        logger.info(
+            f"Re-running {len(error_cmds)} failed {run_type} "
+            f"commands (attempt {attempt}/{max_retries})."
+        )
+        submit_and_wait_pbs(
+            cmds=error_cmds,
+            country_code=country_code,
+            run_type=run_type,
+            host_name=host_name,
+            logger=logger,
+            rotate_logs=True,
+            max_active_jobs=max_jobs,
+        )
+
+    # Final check after all retries
+    remaining = check_error_cmds(
+        log_dir=log_dir,
+        cmds_path=cmds_path,
+        logger=logger,
+    )
+    if remaining:
+        logger.error(
+            f"{len(remaining)} {run_type} runs still failing after "
+            f"{max_retries} retries. Check logs in {log_dir}."
+        )
+        exit(1)
+
+    logger.info(f"All {run_type} runs completed successfully after retries.")
+
+def check_missing_db_files(
+    output_dir: str | Path,
+    cmds_path: str | Path,
+    repetitions: int,
+    logger: logging.Logger | None = None,
+) -> list[str]:
+    """Return commands from *cmds_path* whose expected ``.db`` outputs are missing.
+
+    For every command in ``cmds.txt`` we derive the expected output filename
+    pattern ``<prefix>monthly_data_<j>.db`` from the ``-o`` and ``-j`` flags,
+    then check whether that file exists under *output_dir*.  Commands whose
+    outputs are absent are returned so the caller can resubmit them.
+
+    Parameters
+    ----------
+    output_dir : str | Path
+        Directory where ``.db`` output files are expected (e.g.
+        ``output/<country>/calibration``).
+    cmds_path : str | Path
+        Path to the ``cmds.txt`` written by ``submit_and_wait_pbs``.
+    repetitions : int
+        Expected number of repetitions (used only for logging; actual
+        check is purely file-existence based).
+    logger : logging.Logger, optional
+        Logger for diagnostics.
+
+    Returns
+    -------
+    list[str]
+        Subset of commands from *cmds_path* whose ``.db`` outputs do not
+        exist on disk.
+    """
+    output_dir = Path(output_dir)
+    cmds_path = Path(cmds_path)
+
+    if not cmds_path.exists():
+        if logger:
+            logger.warning(f"cmds_path does not exist: {cmds_path}")
+        return []
+
+    with open(cmds_path, "r") as f:
+        cmd_lines = [line.rstrip("\n") for line in f if line.strip()]
+
+    # Scan output directory once
+    existing: set[str] = set()
+    if output_dir.exists():
+        with os.scandir(output_dir) as it:
+            existing = {e.name for e in it if e.is_file() and e.name.endswith(".db")}
+
+    # Regex to extract -o <prefix> and -j <index> from a command line
+    _out_re = re.compile(r"-o\s+(\S+)")
+    _job_re = re.compile(r"-j\s+(\d+)")
+
+    missing_cmds: list[str] = []
+    seen: set[str] = set()
+
+    for cmd in cmd_lines:
+        out_match = _out_re.search(cmd)
+        job_match = _job_re.search(cmd)
+        if not out_match or not job_match:
+            continue
+
+        # The -o flag value is a prefix like:
+        #   ./output/<country>/calibration/cal_500_0.1_0.01_
+        # MaSim appends: monthly_data_<j>.db
+        prefix = Path(out_match.group(1)).name  # e.g. "cal_500_0.1_0.01_"
+        j = job_match.group(1)                  # e.g. "3"
+        expected_name = f"{prefix}monthly_data_{j}.db"
+
+        if expected_name not in existing and cmd not in seen:
+            seen.add(cmd)
+            missing_cmds.append(cmd)
+
+    if logger:
+        logger.info(
+            f"Missing .db check: {len(missing_cmds)}/{len(cmd_lines)} "
+            f"commands have missing outputs in {output_dir}."
+        )
+
+    return missing_cmds

@@ -64,6 +64,9 @@ while IFS= read -r CMD; do
     err="../log/${base}__${INDEX}.error"
   fi
 
+  echo "Submitting job $INDEX: $CMD"
+  echo "qsub -N $JOBNAME_TARGET -v INDEX=$INDEX,CMD=$CMD,PROJECT_DIR=$PROJECT_DIR -o $out -e $err job_template.pbs"
+
   qsub -N "$JOBNAME_TARGET" \
        -v INDEX="$INDEX",CMD="$CMD",PROJECT_DIR="$PROJECT_DIR" \
        -o "$out" \
