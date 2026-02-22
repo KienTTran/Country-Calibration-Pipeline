@@ -21,4 +21,4 @@ fi
 
 echo "Running validation now."
 
-validate moz -r 50
+validate moz -r 50 -h nd04

@@ -23,17 +23,18 @@ venv/
 
 bin/MaSim
 
-conf/*/calibration
 data/*/calibration
 data/*/analysis
+data/moz_test
 
-jobs/*/*/log_*
-jobs/*/*/log*
-
+conf/
+jobs/
 log/
 output/
 images/
 
+*.error
+*.output
 
 */.DS_Store
 */*/.DS_Store
@@ -42,3 +43,6 @@ images/
 
 src/masim_analysis/__pycache__
 src/masim_analysis/.ipynb_checkpoints
+
+*.error
+*.output
