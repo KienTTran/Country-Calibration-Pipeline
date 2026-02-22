@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N submit_#JOB_NAME#
-#PBS -l select=1:ncpus=1
-#PBS -q max
+#PBS -l select=1:ncpus=1#HOST_NAME#
+#PBS -q #QUEUE_NAME#
 #PBS -e submit_jobs.error
 #PBS -o submit_jobs.output
 
@@ -10,7 +10,7 @@ cd "$PBS_O_WORKDIR"
 USER_NAME=$(whoami)
 
 get_job_count () {
-  qselect -u "$USER_NAME" -N "#JOB_NAME#_single_run" 2>/dev/null | wc -l
+  qselect -u "$USER_NAME" -N "$JOBNAME_TARGET" 2>/dev/null | wc -l
 }
 
 # Extract yml base name from a CMD line:
@@ -64,7 +64,7 @@ while IFS= read -r CMD; do
     err="../log/${base}__${INDEX}.error"
   fi
 
-  qsub -N "#JOB_NAME#_single_run" \
+  qsub -N "$JOBNAME_TARGET" \
        -v INDEX="$INDEX",CMD="$CMD",PROJECT_DIR="$PROJECT_DIR" \
        -o "$out" \
        -e "$err" \

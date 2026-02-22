@@ -17,6 +17,8 @@ from matplotlib.patches import Patch
 from pathlib import Path
 
 from masim_analysis import configure
+import random
+import string
 
 
 def plot_districts(
@@ -153,12 +155,21 @@ def read_raster(file: Path | str) -> tuple[numpy.ndarray, dict]:
 
 
 def write_raster(
-    raster: numpy.ndarray, file: Path | str, xllcorner: float, yllcorner: float, cellsize: int = 5000
+    raster: numpy.ndarray,
+    file: Path | str,
+    xllcorner: float,
+    yllcorner: float,
+    cellsize: int = 5000,
+    mask_raster: numpy.ndarray | None = None,
 ) -> None:
     """
     Write a raster array to a file with:
     - float values formatted to 5 decimals
     - NODATA written as integer
+
+    If mask_raster is provided, any cell where the mask is NODATA
+    will be forced to NODATA in the output, and any cell where the
+    mask has data but the raster is NaN will be written as 0.
     """
 
     file_path = Path(file)
@@ -170,8 +181,21 @@ def write_raster(
 
     nodata = int(configure.NODATA_VALUE)
 
-    # Replace NaN with nodata for writing
-    raster_out = numpy.where(numpy.isnan(raster), nodata, raster)
+    raster_out = raster.copy()
+
+    if mask_raster is not None:
+        if mask_raster.shape != raster.shape:
+            raise ValueError(
+                f"mask_raster shape {mask_raster.shape} does not match raster shape {raster.shape}"
+            )
+        mask_nodata = numpy.isclose(mask_raster, nodata) | numpy.isnan(mask_raster)
+        # Force nodata where mask is nodata
+        raster_out[mask_nodata] = nodata
+        # Where mask has data but raster is NaN, write 0
+        raster_out[~mask_nodata & numpy.isnan(raster_out)] = 0.0
+
+    # Replace any remaining NaN with nodata
+    raster_out = numpy.where(numpy.isnan(raster_out), nodata, raster_out)
 
     with open(file_path, "w") as f:
 
@@ -196,8 +220,6 @@ def write_raster(
                     line.append(f"{float(value):.5f}")
 
             f.write(" ".join(line) + "\n")
-
-
 
 # ==== Logger setup ====
 def get_country_logger(country_code: str, logger_name: str) -> logging.Logger:
@@ -321,7 +343,7 @@ def multiprocess(cmds: list[str], max_workers: int, logger: logging.Logger) -> t
 
     return successful_runs, failed_commands
 
-def prepare_pbs_files(country_code: str, base_dir: str, logger, rotate_logs: bool = True):
+def prepare_pbs_files(country_code: str, base_dir: str, run_type, host_name, logger, rotate_logs: bool = True):
     import os, shutil
     from datetime import datetime
 
@@ -337,28 +359,37 @@ def prepare_pbs_files(country_code: str, base_dir: str, logger, rotate_logs: boo
         logger.info(f"Existing log directory renamed to {new_log_dir}")
 
     os.makedirs(log_dir, exist_ok=True)
+    
+    rand_alphanum = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    jobname_target = f"{country_code}_single_run_{rand_alphanum}"
 
     for fname in ("job_template.template", "submit_jobs.template"):
         src = os.path.join("scripts", fname)
         dst = os.path.join(script_dir, fname.replace(".template", ".pbs"))
 
+        queue_name = "max" if run_type == "calibration" else "nd"
         with open(src, "r") as f:
-            text = f.read().replace("#JOB_NAME#", country_code)
-
+            text = f.read().replace("#JOB_NAME#", jobname_target)
+            text = text.replace("#QUEUE_NAME#", queue_name) 
+            if host_name is None or host_name.strip() == "":
+                text = text.replace("#HOST_NAME#", "")
+            else:
+                text = text.replace("#HOST_NAME#", f":host={host_name.strip()}")
+                
         with open(dst, "w") as f:
             f.write(text)
 
         os.chmod(dst, 0o755)
         logger.info(f"Prepared PBS file: {dst}")
 
-    return script_dir, log_dir
+    return script_dir, log_dir, jobname_target
 
 
 def pbs_counts_qselect(user: str, country_code: str, jobname_target: str) -> tuple[int, int, int]:
     import subprocess
     
     total_out_submit = subprocess.run(
-        ["qselect", "-u", user, "-N", f"submit_{country_code}"],
+        ["qselect", "-u", user, "-N", f"submit_{jobname_target}"],
         capture_output=True, text=True
     )
     total_out_submit = sum(1 for x in total_out_submit.stdout.splitlines() if x.strip())
@@ -384,7 +415,7 @@ def pbs_counts_qselect(user: str, country_code: str, jobname_target: str) -> tup
     return running, ended, total
 
 
-def submit_and_wait_pbs(cmds, country_code, logger, run_type,
+def submit_and_wait_pbs(cmds, country_code, logger, run_type, host_name,
                         max_active_jobs=500, sleep_sec=15,
                         rotate_logs=True):
 
@@ -411,10 +442,7 @@ def submit_and_wait_pbs(cmds, country_code, logger, run_type,
 
     logger.info(f"Commands written to {cmds_path}")
 
-    script_dir, log_dir = prepare_pbs_files(country_code, base_dir, logger, rotate_logs)
-
-    # IMPORTANT: this must match the -N used by your dispatcher for the jobs it creates
-    jobname_target = f"{country_code}_single_run"
+    script_dir, log_dir, jobname_target = prepare_pbs_files(country_code, base_dir, run_type, host_name, logger, rotate_logs)
 
     env = (
         f"CMD_FILE=../cmds.txt,"

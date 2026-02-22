@@ -25,6 +25,7 @@ bin/MaSim
 
 data/*/calibration
 data/*/analysis
+data/moz_test
 
 conf/
 jobs/
@@ -42,3 +43,6 @@ images/
 
 src/masim_analysis/__pycache__
 src/masim_analysis/.ipynb_checkpoints
+
+*.error
+*.output

@@ -947,6 +947,7 @@ def run_calibration_simulations(
     population_scalar: float,
     max_workers: Optional[int] = None,
     logger: Optional[logging.Logger] = None,
+    host_name: Optional[str] = '',
 ) -> None:
     """
     Runs the full country-wide model calibration process using multiprocessing.
@@ -988,6 +989,7 @@ def run_calibration_simulations(
         cmds=cmds,
         country_code=country.country_code,
         run_type="calibration",
+        host_name=host_name,
         logger=logger,
         rotate_logs=True,
     )
@@ -1011,6 +1013,7 @@ def run_calibration_simulations(
                     cmds=run_error_cmds,
                     country_code=country.country_code,
                     run_type="calibration",
+                    host_name=host_name,
                     logger=logger,
                     rotate_logs=True,
                 )
@@ -1110,7 +1113,7 @@ def _summarize_calibration_results(
                     summary.loc[filename, "iteration"] = int(i)
                     # summary.loc[filename, "pfpr"] = pfpr
 
-    summary.to_csv(f"{base_file_path}/calibration_summary.csv")
+    summary.to_csv(Path("data") / country.country_code / "analysis" / "calibration_summary.csv", index=False)
     return summary
 
 
@@ -1148,12 +1151,11 @@ def summarize_calibration_results(country: CountryParams, data_path: Path | str 
     summary["pfpr_all"] = summary["pfpr_all"].div(100)
     summary = summary.drop(columns=["iteration"])
     summary = summary.groupby(["population", "access_rate", "beta"]).mean().reset_index()
+    # summary.to_csv(Path("data") / country.country_code / "analysis" / "calibration_means.csv", index=False)
     return summary
-    # summary.to_csv(f"{base_file_path}/calibration_means.csv", index=False)
-    # summary.head(25)
 
 
-def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.0, output_dir: Path | str = Path("output")) -> None:
+def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.0, output_dir: Path | str = Path("output"), host_name: str = "") -> None:
     """
     Calibrate the MaSim model for a given country.
     """
@@ -1177,7 +1179,7 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
 
     # Run calibration simulations
     logger.info("Running calibration simulations...")
-    run_calibration_simulations(country, access_rates, repetitions, population_scalar, logger=logger)
+    run_calibration_simulations(country, access_rates, repetitions, population_scalar, logger=logger, host_name=host_name)
 
     # Check for missing runs
     logger.info("Checking for missing calibration runs...")
@@ -1190,6 +1192,7 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
             country_code=country.country_code,
             logger=logger,
             run_type="calibration",
+            host_name=host_name,
             rotate_logs=True,
         )
 
@@ -1208,6 +1211,7 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
                     country_code=country.country_code,
                     logger=logger,
                     run_type="calibration",
+                    host_name=host_name,
                     rotate_logs=True,
                 )
             else:
@@ -1228,7 +1232,7 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
     # Summarize calibration results
     logger.info("Summarizing calibration results...")
     means = summarize_calibration_results(country, Path(output_dir) / country.country_code / "calibration")
-    means.to_csv(Path(output_dir) / country.country_code / "calibration" / "calibration_means.csv", index=False)
+    means.to_csv(Path("data") / country.country_code / "analysis" / "calibration_means.csv", index=False)
     logger.info("Fitting log-sigmoid models to calibration data...")
     models_map = get_beta_models(
         populations=country.calibration_population_bins,
@@ -1260,7 +1264,10 @@ def calibrate(country_code: str, repetitions: int, population_scalar: float = 1.
         models_map = load_beta_model(Path("data") / country.country_code / models_map_filename)
         beta_map = create_beta_map(models_map, population_raster, access_rate_raster, prevalence_raster)
         beta_map_filename = Path("data") / country.country_code / f"{country.country_code}_beta.asc"
-        utils.write_raster(beta_map, beta_map_filename, meta["xllcorner"], meta["yllcorner"], meta["cellsize"])
+        if country.use_masked_raster:
+            utils.write_raster(beta_map, beta_map_filename, meta["xllcorner"], meta["yllcorner"], meta["cellsize"],mask_raster=population_raster)
+        else:
+            utils.write_raster(beta_map, beta_map_filename, meta["xllcorner"], meta["yllcorner"], meta["cellsize"])
         logger.info(f"Saved beta map to {beta_map_filename}")
     except Exception as e:
         logger.error(f"Error creating beta map: {e}")
@@ -1305,11 +1312,11 @@ def plot_log_sigmoid_fits(
             ax.set_ylim(0, 1)
     fig.suptitle("pfPr vs. Beta Data and Curve Fits by Population & Treatment Access", fontsize=24)
     fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.96))
+    fig.savefig(Path("images") / country.country_code / f"{country.country_code}_log_sigmoid_fit.png")
+    logger.info(
+        f"Saved plot to {Path('images') / country.country_code / f'{country.country_code}_log_sigmoid_fit.png'}"
+    )
     return fig
-    # fig.savefig(Path("images") / country.country_code / f"{country.country_code}_log_sigmoid_fit.png")
-    # logger.info(
-    #     f"Saved plot to {Path('images') / country.country_code / f'{country.country_code}_log_sigmoid_fit.png'}"
-    # )
     # plt.close(fig)
 
 
@@ -1337,9 +1344,16 @@ def main():
         default=1.0,
         help="Population scale (0.1-1.0)",
     )
+    parser.add_argument(
+        "-n",
+        "--node_name",
+        type=str,
+        default="",
+        help="Node name for PBS job submission (default: '' for max queue to run on all hosts).",
+    )
     args = parser.parse_args()
 
-    calibrate(args.country_code, args.repetitions, args.population_scalar, args.output_dir)
+    calibrate(args.country_code, args.repetitions, args.population_scalar, args.output_dir, args.node_name)
 
 
 if __name__ == "__main__":

@@ -275,7 +275,8 @@ def check_missing_runs_exists_only_validation(
 def validate(country_code: str, repetitions: int = 50, 
              output_dir: Path | str = Path("output"), 
              job_dir: Path | str = Path("jobs"),
-             scaling: float = 0.25):
+             scaling: float = 0.25,
+             host_name: str = 'nd04'):
     """
     run the validation pipeline for a MaSim model for a given country.
 
@@ -371,6 +372,7 @@ def validate(country_code: str, repetitions: int = 50,
             cmds=cmds,
             country_code=country.country_code,
             run_type="validation",
+            host_name=host_name,
             logger=logger,
             rotate_logs=True,
         )
@@ -388,16 +390,19 @@ def validate(country_code: str, repetitions: int = 50,
                 country_code=country.country_code,
                 logger=logger,
                 run_type="validation",
+                host_name=host_name,
                 rotate_logs=True,
             )
 
             logger.info("\nRunning missing validation completed")
             
+            cmds_path = os.path.join("jobs", country.country_code, "calibration", "cmds.txt")
             run_error_cmds = []
             for attempt in range(2):    
                 run_error_cmds = utils.check_error_cmds(
                     os.path.join("jobs", country.country_code, "validation", "log"),
-                    logger
+                    cmds_path=cmds_path,
+                    logger=logger
                 )
                 if run_error_cmds:
                     logger.info(f"Attempting to re-run {len(run_error_cmds)} failed runs (Attempt {attempt + 1}/2).")
@@ -406,6 +411,7 @@ def validate(country_code: str, repetitions: int = 50,
                         country_code=country.country_code,
                         logger=logger,
                         run_type="validation",
+                        host_name=host_name,
                         rotate_logs=True,
                     )
                 else:
@@ -414,7 +420,8 @@ def validate(country_code: str, repetitions: int = 50,
             # Final check for any remaining failed runs
             run_error_cmds = utils.check_error_cmds(
                 os.path.join("jobs", country.country_code, "validation", "log"),
-                logger
+                cmds_path=cmds_path,
+                logger=logger
             )
             
             if run_error_cmds:
@@ -455,12 +462,20 @@ def main():
         default=0.25,
         help="Artificial rescaling of population size (default: 0.25).",
     )
+    parser.add_argument(
+        "-n",
+        "--node_name",
+        type=str,
+        default="nd04",
+        help="Name of the node to run simulations (default: 'nd04').",
+    )
     args = parser.parse_args()
     validate(
         args.country_code,
         repetitions=args.repetitions,
         output_dir=args.output_dir,
         scaling=args.scaling,
+        host_name=args.node_name,
     )
 
 if __name__ == "__main__":

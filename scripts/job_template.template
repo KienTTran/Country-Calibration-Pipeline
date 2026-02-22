@@ -1,12 +1,11 @@
 #!/bin/bash
-#PBS -N #JOB_NAME#_single_run
-#PBS -l select=1:ncpus=1
+#PBS -l select=1:ncpus=1#HOST_NAME#
 #PBS -l walltime=240:00:00
-#PBS -q max
+#PBS -q #QUEUE_NAME#
 
 #cd $PBS_O_WORKDIR
 cd $PROJECT_DIR || exit 1
 
-echo "Running job #JOB_NAME#_single_run $INDEX"
+echo "Running job $JOBNAME_TARGET $INDEX"
 echo "Command: $CMD"
 eval "$CMD"

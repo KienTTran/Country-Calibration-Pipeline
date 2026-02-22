@@ -19,10 +19,10 @@ then
     exit 1
 fi
 
-calibrate moz_test -r 2
+calibrate moz_test -r 1
 
 echo "Calibration for Mozambique Test completed."
 echo "================================"
 echo "Running validation now."
 
-validate moz_test -r 2 -s 0.0025
+validate moz_test -r 2 -s 0.0025 -n nd04

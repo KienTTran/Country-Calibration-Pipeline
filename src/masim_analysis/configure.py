@@ -524,6 +524,7 @@ class CountryParams:
     upper_bound_case_count: int
     calibration_betas: list[float]
     calibration_population_bins: list[int]
+    use_masked_raster: bool = False
 
     def to_dict(self):
         out = asdict(self)
@@ -551,6 +552,7 @@ class CountryParams:
             upper_bound_case_count=data["upper_bound_case_count"],
             calibration_betas=data["calibration_betas"],
             calibration_population_bins=data["calibration_population_bins"],
+            use_masked_raster=data.get("use_masked_raster", False),
         )
 
     @staticmethod
